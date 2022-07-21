@@ -175,40 +175,40 @@ fn main() -> std::io::Result<()> {
     println!("File size: {} GiB, chunk size: {}", fsize, chunk_size);
     #[cfg(feature="seq_read")]
     println!(
-        "seq_read: {:.2} GiB/s",
+        "seq_read:\t\t\t {:.2} GiB/s",
         fsize / seq_read(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_read_all")]
     println!(
-        "seq_read_all: {:.2} GiB/s",
+        "seq_read_all:\t\t\t {:.2} GiB/s",
         fsize / seq_read_all(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_buf_read")]
     println!(
-        "seq_buf_read: {:.2} GiB/s",
+        "seq_buf_read:\t\t\t {:.2} GiB/s",
         fsize / seq_buf_read(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_buf_read_all")]
     println!(
-        "seq_buf_read_all: {:.2} GiB/s",
+        "seq_buf_read_all:\t\t {:.2} GiB/s",
         fsize / seq_buf_read_all(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_mmap_read")]
     println!(
-        "seq_mmap_read: {:.2} GiB/s",
+        "seq_mmap_read:\t\t\t {:.2} GiB/s",
         fsize / seq_mmap_read(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_mmap_read_all")]
     println!(
-        "seq_mmap_read_all: {:.2} GiB/s",
+        "seq_mmap_read_all:\t\t {:.2} GiB/s",
         fsize / seq_mmap_read_all(fname, chunk_size)?.as_secs_f64());
     #[cfg(feature="seq_glommio_read")]
     println!(
-        "seq_glommio_read: {:.2} GiB/s",
+        "seq_glommio_read:\t\t {:.2} GiB/s",
         fsize / seq_glommio_read(fname, chunk_size)?.as_secs_f64());
     #[cfg(feature="async_glommio_read")]
     println!(
-        "async_glommio_read: {:.2} GiB/s",
+        "async_glommio_read:\t\t {:.2} GiB/s",
         fsize / async_glommio_read(fname, chunk_size)?.as_secs_f64());
     Ok(())
 }
