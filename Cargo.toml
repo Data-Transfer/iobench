@@ -1,0 +1,29 @@
+[package]
+name = "iobench"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default=[]
+seq_read=[]
+seq_read_all=[]
+seq_buf_read=[]
+seq_buf_read_all=[]
+seq_mmap_read=[]
+seq_mmap_read_all=[]
+seq_glommio_read=[]
+async_glommio_read=[]
+all=["seq_read",
+     "seq_read_all",
+     "seq_buf_read",
+     "seq_buf_read_all",
+     "seq_mmap_read",
+     "seq_mmap_read_all",
+     "seq_glommio_read",
+     "async_glommio_read"]
+
+[dependencies]
+memmap = "*"
+page_size = "*"
+futures = "*"
+glommio = "*"
