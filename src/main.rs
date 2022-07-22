@@ -3,6 +3,7 @@
 use memmap::MmapOptions;
 use std::time::{Duration, Instant};
 use glommio::{io::BufferedFile, LocalExecutor};
+use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
 
 //-----------------------------------------------------------------------------
 fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
@@ -41,6 +42,28 @@ fn seq_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     dump(&filebuf)?;
     Ok(e)
 }
+//-----------------------------------------------------------------------------
+fn seq_read_direct_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
+    let fsize = std::fs::metadata(fname)?.len();
+    let mut r = 0_u64;
+    let mut file = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECT)
+        .open(fname)?;
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize);
+    use std::io::Read;
+    let t = Instant::now();
+    while r < fsize {
+        let b = r as usize;
+        let e = (b + (chunk_size as usize)).min(fsize as usize);
+        file.read_exact(&mut filebuf[b..e])?;
+        r += chunk_size;
+    }
+    let e = t.elapsed();
+    dump(&filebuf)?;
+    Ok(e)
+}
+
 //-----------------------------------------------------------------------------
 fn seq_buf_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
@@ -182,6 +205,11 @@ fn main() -> std::io::Result<()> {
     println!(
         "seq_read_all:\t\t\t {:.2} GiB/s",
         fsize / seq_read_all(fname, chunk_size)?.as_secs_f64()
+    );
+    #[cfg(feature="seq_read_direct_all")]
+    println!(
+        "seq_read_direct_all:\t\t {:.2} GiB/s",
+        fsize / seq_read_direct_all(fname, chunk_size)?.as_secs_f64()
     );
     #[cfg(feature="seq_buf_read")]
     println!(

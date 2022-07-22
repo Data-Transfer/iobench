@@ -380,6 +380,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "glommio",
+ "libc",
  "memmap",
  "page_size",
 ]

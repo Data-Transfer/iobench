@@ -7,6 +7,7 @@ edition = "2021"
 default=[]
 seq_read=[]
 seq_read_all=[]
+seq_read_direct_all=[]
 seq_buf_read=[]
 seq_buf_read_all=[]
 seq_mmap_read=[]
@@ -15,6 +16,7 @@ seq_glommio_read=[]
 async_glommio_read=[]
 all=["seq_read",
      "seq_read_all",
+     "seq_read_direct_all",
      "seq_buf_read",
      "seq_buf_read_all",
      "seq_mmap_read",
@@ -27,3 +29,4 @@ memmap = "*"
 page_size = "*"
 futures = "*"
 glommio = "*"
+libc = "*"
