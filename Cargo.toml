@@ -14,7 +14,8 @@ seq_mmap_read=[]
 seq_mmap_read_all=[]
 seq_glommio_read=[]
 async_glommio_read=[]
-all=["seq_read",
+all_read=[
+     "seq_read",
      "seq_read_all",
      "seq_read_direct_all",
      "seq_buf_read",
@@ -30,3 +31,7 @@ page_size = "*"
 futures = "*"
 glommio = "*"
 libc = "*"
+
+[profile.release]
+lto = true
+codegen-units = 1

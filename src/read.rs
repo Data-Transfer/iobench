@@ -1,8 +1,8 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
 //use std::thread;
+use glommio::{io::BufferedFile, LocalExecutor};
 use memmap::MmapOptions;
 use std::time::{Duration, Instant};
-use glommio::{io::BufferedFile, LocalExecutor};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
 
 //-----------------------------------------------------------------------------
@@ -155,7 +155,7 @@ pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
             let b = r as usize;
             let e = (fsize as usize).min(b + chunk_size as usize);
             filebuf[b..e].clone_from_slice(&file.read_at(b as u64, chunk_size as usize).await?);
-            r += chunk_size; 
+            r += chunk_size;
         }
         let e = t.elapsed();
         dump(&filebuf)?;
@@ -176,7 +176,7 @@ pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Durat
             let b = r as usize;
             let e = (fsize as usize).min(b + chunk_size as usize);
             f.push((b, e, file.read_at(b as u64, chunk_size as usize).await));
-            r += chunk_size; 
+            r += chunk_size;
         }
         for i in f {
             filebuf[i.0..i.1].clone_from_slice(&i.2?);
@@ -204,7 +204,7 @@ pub fn aligned_vec<T: Sized>(size: usize, capacity: usize, align: usize) -> Vec<
 }
 //-----------------------------------------------------------------------------
 // #[cfg(any(feature="seq_read_all", feature="seq_mmap_read", feature="seq_mmap_read_all"))]
-fn page_aligned_vec<T: Sized>(size: usize, capacity: usize) -> Vec<T>  {   
+fn page_aligned_vec<T: Sized>(size: usize, capacity: usize) -> Vec<T> {
     aligned_vec::<T>(size, capacity, page_size::get())
 }
 //----------j------------------------------------------------------------------
