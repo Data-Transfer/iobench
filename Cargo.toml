@@ -30,7 +30,7 @@ memmap = "*"
 page_size = "*"
 futures = "*"
 glommio = "*"
-libc = "*"
+libc = "0.2"
 
 [profile.release]
 lto = true

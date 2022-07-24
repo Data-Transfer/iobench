@@ -1,7 +1,4 @@
-use std::time::{Duration, Instant};
-
-// Create type to move pointer can extend with new
-// returning either wrapped pointer or None when pointer is null
+use std::time::{Duration, Instant}; // Create type to move pointer can extend with new returning either wrapped pointer or None when pointer is null
 #[derive(Copy, Clone)]
 struct Movable<T>(*const T);
 
@@ -28,7 +25,7 @@ impl<T> MovableMut<T> {
 unsafe impl<T> Send for Movable<T> {}
 unsafe impl<T> Send for MovableMut<T> {}
 
-const SIZE_U8: usize = 0x40000000;
+const SIZE_U8: usize = 1024 * 1024 * 1024;
 const SIZE_U64: usize = 0x8000000;
 fn cp1<T: Copy>(src: &[T], dst: &mut [T]) {
     dst.copy_from_slice(src);
@@ -36,11 +33,14 @@ fn cp1<T: Copy>(src: &[T], dst: &mut [T]) {
 fn cp2<T: Clone>(src: &[T], dst: &mut [T]) {
     dst.clone_from_slice(src);
 }
-fn cp3<T>(src: &[T], dst: &mut [T]) {
+use std::ffi::*;
+//type size_t = usize;
+extern "C" { fn memcpy(dest: *mut c_void, src: *const c_void, n: usize) -> *mut c_void; }
+fn cp3(src: &[u8], dst: &mut [u8]) {
     unsafe {
-        libc::memcpy(
-            dst.as_mut_ptr() as *mut libc::c_void,
-            src.as_ptr() as *const libc::c_void,
+        memcpy(
+            dst.as_mut_ptr() as *mut c_void,
+            src.as_ptr() as *const c_void,
             dst.len(),
         );
     }
@@ -55,9 +55,9 @@ fn par_cp<T: 'static>(src: &[T], dst: &mut [T], n: usize) {
             let s = Movable(src.as_ptr().offset(idx));
             let d = MovableMut(dst.as_mut_ptr().offset(idx));
             th.push(std::thread::spawn(move || {
-                libc::memcpy(
-                    d.get().unwrap() as *mut libc::c_void,
-                    s.get().unwrap() as *const libc::c_void,
+                memcpy(
+                    d.get().unwrap() as *mut c_void,
+                    s.get().unwrap() as *const c_void,
                     cs,
                 );
             }))
@@ -92,7 +92,11 @@ fn par_cp2<T: 'static + Copy>(src: &[T], dst: &mut [T], n: usize) {
 fn cp_avx<T: 'static + Copy>(src: &[T], dst: &mut [T]) {
    for i in (0..src.len()).step_by(256) {
     unsafe {
-    // let base = 0;
+    // let base = 4096;
+    // if i % base == 0 && (i < (dst.len() - base)) { 
+    //     std::arch::x86_64::_mm_prefetch(dst.as_ptr().offset(i as isize + base as isize) as *const i8, std::arch::x86_64::_MM_HINT_T0);
+    //     std::arch::x86_64::_mm_prefetch(src.as_ptr().offset(i as isize + base as isize) as *const i8, std::arch::x86_64::_MM_HINT_T0);
+    // }
     // std::arch::x86_64::_mm_prefetch(src.as_ptr().offset(i as isize + base) as *const i8, std::arch::x86_64::_MM_HINT_T1);
     // std::arch::x86_64::_mm_prefetch(src.as_ptr().offset(i as isize + base + 32) as *const i8, std::arch::x86_64::_MM_HINT_T1);
     // std::arch::x86_64::_mm_prefetch(src.as_ptr().offset(i as isize + base + 64) as *const i8, std::arch::x86_64::_MM_HINT_T1);
@@ -131,14 +135,15 @@ fn cp_avx<T: 'static + Copy>(src: &[T], dst: &mut [T]) {
 fn main() {
     // let src = vec![0_u64; SIZE_U64];
     // let mut dest = vec![0_u64; SIZE_U64];
-    let src = page_aligned_vec::<u8>(SIZE_U8, SIZE_U8);
+    let mut src = page_aligned_vec::<u8>(SIZE_U8, SIZE_U8);
     let mut dest = page_aligned_vec::<u8>(SIZE_U8, SIZE_U8);
+    for i in (0..SIZE_U8).step_by(page_size::get()) {
+        dest[i] = 0;
+    }
     let t = Instant::now();
-    //cp3(&src, &mut dest);
-    //par_cp(&src, &mut dest, 2);
-    cp_avx(&src, &mut dest);
+    par_cp(&src, &mut dest, 8);
     let e = t.elapsed().as_millis();
-    println!("{} {}", dest[100], e);
+    println!("{}", e);
 }
 //-----------------------------------------------------------------------------
 //#[cfg(any(feature="seq_read_all", feature="seq_mmap_read", feature="seq_mmap_read_all"))]
