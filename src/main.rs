@@ -1,12 +1,13 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
 mod read;
+mod alloc;
 use read::*;
 //-----------------------------------------------------------------------------
 fn main() -> std::io::Result<()> {
     let fname = &std::env::args().nth(1).expect("Missing file name");
     let chunk_size = std::env::args()
         .nth(2)
-        .expect("Missing file size")
+        .expect("Missing chunk size")
         .parse::<u64>()
         .expect("Wrong file size");
     let fsize = (std::fs::metadata(fname)?.len() as f64) / 0x40000000 as f64;
