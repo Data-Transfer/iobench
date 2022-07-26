@@ -3,7 +3,7 @@ use glommio::{io::BufferedFile, LocalExecutor};
 use memmap::MmapOptions;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
-use crate::alloc;
+use aligned_vec::*;
 //-----------------------------------------------------------------------------
 pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
@@ -28,7 +28,7 @@ pub fn seq_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let mut r = 0_u64;
     let mut file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     use std::io::Read;
     let t = Instant::now();
     while r < fsize {
@@ -49,7 +49,7 @@ pub fn seq_read_direct_all(fname: &str, chunk_size: u64) -> std::io::Result<Dura
         .read(true)
         .custom_flags(libc::O_DIRECT)
         .open(fname)?;
-    let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     use std::io::Read;
     let t = Instant::now();
     while r < fsize {
@@ -88,7 +88,7 @@ pub fn seq_buf_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
     let fsize = std::fs::metadata(fname)?.len();
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut br = std::io::BufReader::new(file);
     use std::io::Read;
     let t = Instant::now();
@@ -128,7 +128,7 @@ pub fn seq_mmap_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Durati
     let fsize = std::fs::metadata(fname)?.len();
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mmap = unsafe { MmapOptions::new().map(&file)? };
     let t = Instant::now();
     while r < fsize {
@@ -147,7 +147,7 @@ pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
     let ex = LocalExecutor::default();
     ex.run(async {
         let mut r = 0_u64;
-        let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+        let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
         let file = BufferedFile::open(fname).await?;
         let t = Instant::now();
         while r < fsize {
@@ -167,7 +167,7 @@ pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Durat
     let ex = LocalExecutor::default();
     ex.run(async {
         let mut r = 0_u64;
-    let mut filebuf: Vec<u8> = alloc::page_aligned_vec(fsize as usize, fsize as usize, Some(0));
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
         let file = BufferedFile::open(fname).await?;
         let t = Instant::now();
         let mut f = Vec::with_capacity(((fsize + chunk_size) / chunk_size) as usize);

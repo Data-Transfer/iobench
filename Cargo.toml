@@ -26,11 +26,12 @@ all_read=[
      "async_glommio_read"]
 
 [dependencies]
-memmap = "*"
-page_size = "*"
-futures = "*"
-glommio = "*"
+memmap = "0.7"
+page_size = "0.4"
+futures = "0.3"
+glommio = "0.7"
 libc = "0.2"
+aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
 
 [profile.release]
 lto = true

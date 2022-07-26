@@ -1,6 +1,5 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
 mod read;
-mod alloc;
 use read::*;
 //-----------------------------------------------------------------------------
 fn main() -> std::io::Result<()> {
