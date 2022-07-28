@@ -1,6 +1,5 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
-mod read;
-use read::*;
+use iobench::read::*;
 //-----------------------------------------------------------------------------
 fn main() -> std::io::Result<()> {
     let fname = &std::env::args().nth(1).expect("Missing file name");

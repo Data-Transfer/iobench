@@ -25,6 +25,26 @@ all_read=[
      "seq_glommio_read",
      "async_glommio_read"]
 
+seq_write=[]
+seq_write_all=[]
+seq_write_direct_all=[]
+seq_buf_write=[]
+seq_buf_write_all=[]
+seq_mmap_write=[]
+seq_mmap_write_all=[]
+# seq_glommio_write=[]
+# async_glommio_write=[]
+all_write=[
+     "seq_write",
+     "seq_write_all",
+     "seq_write_direct_all",
+     "seq_buf_write",
+     "seq_buf_write_all",
+     "seq_mmap_write",
+     "seq_mmap_write_all"]
+     # "seq_glommio_write",
+     # "async_glommio_write"]
+
 [dependencies]
 memmap = "0.7"
 page_size = "0.4"
