@@ -1,6 +1,6 @@
 //! Read from file using a variety of APIs.
-use glommio::{io::BufferedFile, LocalExecutor};
-use memmap::MmapOptions;
+//use glommio::{io::BufferedFile, LocalExecutor};
+use memmap2::MmapOptions;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
 use aligned_vec::*;
@@ -21,19 +21,19 @@ pub fn seq_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Resu
 }
 //-----------------------------------------------------------------------------
 pub fn seq_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
-    let mut r = 0_u64;
     let mut file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
     let fsize = num_chunks * chunk_size;
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    let mut r = 0_u64;
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
         let e = b + (chunk_size as usize);
-        file.write_all(&filebuf[b..e])?;
-        r += chunk_size;
+        r += file.write(&filebuf[b..e])? as u64;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     Ok(e)
@@ -51,9 +51,9 @@ pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64) -> st
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
-        let e = b + (chunk_size as usize);
-        file.write_all(&filebuf[b..e])?;
-        r += chunk_size;
+        let e = (b + (chunk_size as usize)).min(fsize as usize);
+        r += file.write(&filebuf[b..e])? as u64;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     Ok(e)
@@ -61,7 +61,7 @@ pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64) -> st
 
 //-----------------------------------------------------------------------------
 pub fn seq_buf_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
-    let mut file = std::fs::OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
@@ -77,7 +77,7 @@ pub fn seq_buf_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::
 //-----------------------------------------------------------------------------
 pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
-    let mut file = std::fs::OpenOptions::new()
+    let  file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
@@ -87,17 +87,16 @@ pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
-        let e = b + (chunk_size as usize);
-        br.write_all(&filebuf[b..e])?;
-        r += chunk_size;
+        let e = (b + (chunk_size as usize)).min(fsize as usize);
+        r += br.write(&filebuf[b..e])? as u64;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     Ok(e)
 }
 //-----------------------------------------------------------------------------
 pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
-    let mut r = 0_u64;
-    let mut file = std::fs::OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)
@@ -105,6 +104,7 @@ pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io:
     let fsize = num_chunks * chunk_size;
     let buf = vec![0_u8; chunk_size as usize];
     let mut mmap = unsafe { MmapOptions::new().len(fsize as usize).map_mut(&file)? };
+    let mut r = 0_u64;
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
@@ -118,7 +118,7 @@ pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io:
 //-----------------------------------------------------------------------------
 pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
-    let mut file = std::fs::OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)

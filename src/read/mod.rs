@@ -1,8 +1,9 @@
 //! Read from file using a variety of APIs.
 use glommio::{io::BufferedFile, LocalExecutor};
-use memmap::MmapOptions;
+use memmap2::MmapOptions;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
+use std::io::Read;
 use aligned_vec::*;
 //-----------------------------------------------------------------------------
 pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
@@ -10,7 +11,6 @@ pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
     let mut file = std::fs::File::open(fname)?;
     let mut buf = vec![0_u8; chunk_size as usize];
-    use std::io::Read;
     let t = Instant::now();
     while r < fsize {
         unsafe {
@@ -29,13 +29,12 @@ pub fn seq_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
     let mut file = std::fs::File::open(fname)?;
     let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    use std::io::Read;
     let t = Instant::now();
     while r < fsize {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
-        file.read_exact(&mut filebuf[b..e])?;
-        r += chunk_size;
+        r += file.read(&mut filebuf[b..e])? as u64;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     dump(&filebuf)?;
@@ -50,13 +49,13 @@ pub fn seq_read_direct_all(fname: &str, chunk_size: u64) -> std::io::Result<Dura
         .custom_flags(libc::O_DIRECT)
         .open(fname)?;
     let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    use std::io::Read;
     let t = Instant::now();
     while r < fsize {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
-        file.read_exact(&mut filebuf[b..e])?;
-        r += chunk_size;
+        r += file.read(&mut filebuf[b..e])? as u64;
+        //file.read_exact(&mut filebuf[b..e])?;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     dump(&filebuf)?;
@@ -70,7 +69,6 @@ pub fn seq_buf_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let file = std::fs::File::open(fname)?;
     let mut buf = vec![0_u8; chunk_size as usize];
     let mut br = std::io::BufReader::new(file);
-    use std::io::Read;
     let t = Instant::now();
     while r < fsize {
         unsafe {
@@ -90,13 +88,13 @@ pub fn seq_buf_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
     let file = std::fs::File::open(fname)?;
     let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut br = std::io::BufReader::new(file);
-    use std::io::Read;
     let t = Instant::now();
     while r < fsize {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
-        br.read_exact(&mut filebuf[b..e])?;
-        r += chunk_size;
+        r += br.read(&mut filebuf[b..e])? as u64;
+        //br.read_exact(&mut filebuf[b..e])?;
+        //r += chunk_size;
     }
     let e = t.elapsed();
     dump(&filebuf)?;
