@@ -3,6 +3,19 @@ name = "iobench"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+memmap2 = "0.5"
+page_size = "0.4"
+futures = "0.3"
+glommio = "0.7"
+libc = "0.2"
+vecio = "*"
+aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
+
+[profile.release]
+lto = true
+codegen-units = 1
+
 [features]
 default=[]
 seq_read=[]
@@ -12,6 +25,7 @@ seq_buf_read=[]
 seq_buf_read_all=[]
 seq_mmap_read=[]
 seq_mmap_read_all=[]
+seq_vec_read_all=[]
 seq_glommio_read=[]
 async_glommio_read=[]
 all_read=[
@@ -22,6 +36,7 @@ all_read=[
      "seq_buf_read_all",
      "seq_mmap_read",
      "seq_mmap_read_all",
+     "seq_vec_read_all",
      "seq_glommio_read",
      "async_glommio_read"]
 
@@ -32,6 +47,7 @@ seq_buf_write=[]
 seq_buf_write_all=[]
 seq_mmap_write=[]
 seq_mmap_write_all=[]
+seq_vec_write_all=[]
 # seq_glommio_write=[]
 # async_glommio_write=[]
 all_write=[
@@ -41,18 +57,7 @@ all_write=[
      "seq_buf_write",
      "seq_buf_write_all",
      "seq_mmap_write",
+     "seq_vec_write_all",
      "seq_mmap_write_all"]
      # "seq_glommio_write",
      # "async_glommio_write"]
-
-[dependencies]
-memmap2 = "0.5"
-page_size = "0.4"
-futures = "0.3"
-glommio = "0.7"
-libc = "0.2"
-aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
-
-[profile.release]
-lto = true
-codegen-units = 1

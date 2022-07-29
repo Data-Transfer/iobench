@@ -49,6 +49,11 @@ fn main() -> std::io::Result<()> {
         "seq_mmap_read_all:\t\t {:.2} GiB/s",
         fsize / seq_mmap_read_all(fname, chunk_size)?.as_secs_f64()
     );
+    #[cfg(feature = "seq_vec_read_all")]
+    println!(
+        "seq_vec_read_all:\t\t {:.2} GiB/s",
+        fsize / seq_vec_read_all(fname, chunk_size)?.as_secs_f64()
+    );
     #[cfg(feature = "seq_glommio_read")]
     println!(
         "seq_glommio_read:\t\t {:.2} GiB/s",

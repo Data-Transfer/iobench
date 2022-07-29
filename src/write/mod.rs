@@ -1,4 +1,4 @@
-//! Read from file using a variety of APIs.
+//! Write to file using a variety of APIs.
 //use glommio::{io::BufferedFile, LocalExecutor};
 use memmap2::MmapOptions;
 use std::time::{Duration, Instant};
@@ -16,6 +16,7 @@ pub fn seq_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Resu
     for _ in 0..num_chunks {
         file.write_all(&buf)?;
     }
+    file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
@@ -35,6 +36,7 @@ pub fn seq_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::
         r += file.write(&filebuf[b..e])? as u64;
         //r += chunk_size;
     }
+    file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
@@ -55,6 +57,7 @@ pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64) -> st
         r += file.write(&filebuf[b..e])? as u64;
         //r += chunk_size;
     }
+    file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
@@ -71,19 +74,20 @@ pub fn seq_buf_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::
     for _ in 0..num_chunks {
         br.write_all(&buf)?;
     }
+    br.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
 //-----------------------------------------------------------------------------
 pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
-    let  file = std::fs::OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
     let fsize = chunk_size * num_chunks;
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    let mut br = std::io::BufWriter::new(file);
+    let mut br = std::io::BufWriter::new(&file);
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
@@ -91,12 +95,13 @@ pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::
         r += br.write(&filebuf[b..e])? as u64;
         //r += chunk_size;
     }
+    br.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
 //-----------------------------------------------------------------------------
 pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
-    let file = std::fs::OpenOptions::new()
+    let mut file = std::fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)
@@ -112,13 +117,14 @@ pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io:
         mmap[b..e].copy_from_slice(&buf);
         r += chunk_size;
     }
+    file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
 //-----------------------------------------------------------------------------
 pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
     let mut r = 0_u64;
-    let file = std::fs::OpenOptions::new()
+    let mut file = std::fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)
@@ -133,6 +139,31 @@ pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std:
         mmap[b..e].copy_from_slice(&filebuf[b..e]);
         r += chunk_size;
     }
+    file.flush()?;
+    let e = t.elapsed();
+    Ok(e)
+}
+//-----------------------------------------------------------------------------
+pub fn seq_vec_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+    let mut r = 0_u64;
+    let mut file = std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .open(fname)?;
+    let fsize = num_chunks * chunk_size;
+    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    use vecio::Rawv;
+    let mut iovec = vec![];
+    for _ in 0..num_chunks {
+        let b = r as usize;
+        let e = b + (chunk_size as usize);
+        iovec.push(&filebuf[b..e]);
+        r += chunk_size;
+    }
+    let t = Instant::now();
+    file.writev(&iovec)?;
+    file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }

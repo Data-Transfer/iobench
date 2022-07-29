@@ -54,6 +54,11 @@ fn main() -> std::io::Result<()> {
         "seq_mmap_write_all:\t\t {:.2} GiB/s",
         fsize / seq_mmap_write_all(fname, chunk_size, num_chunks)?.as_secs_f64()
     );
+    #[cfg(feature = "seq_vec_write_all")]
+    println!(
+        "seq_vec_write_all:\t\t {:.2} GiB/s",
+        fsize / seq_vec_write_all(fname, chunk_size, num_chunks)?.as_secs_f64()
+    );
     #[cfg(feature = "seq_glommio_write")]
     println!(
         "seq_glommio_write:\t\t {:.2} GiB/s",
