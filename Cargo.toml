@@ -11,7 +11,7 @@ page_size = "0.4"
 #glommio = "0.7"
 libc = "0.2"
 aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
-
+par_seq = {git = "https://github.com/uv-rust/par_seq"}
 [profile.release]
 lto = true
 codegen-units = 1

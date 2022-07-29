@@ -37,6 +37,7 @@ dependencies = [
  "libc",
  "memmap2",
  "page_size",
+ "par_seq",
 ]
 
 [[package]]
@@ -84,6 +85,11 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "par_seq"
+version = "0.1.0"
+source = "git+https://github.com/uv-rust/par_seq#af02d0693f4f5edfc4091759c197b3499ef78d3e"
 
 [[package]]
 name = "winapi"
