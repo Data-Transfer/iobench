@@ -1,10 +1,13 @@
 //! Read from file using a variety of APIs.
+#[cfg(any(feature="async_glommio_read", feature="seq_glommio_read"))]
 use glommio::{io::BufferedFile, LocalExecutor};
+
 use memmap2::MmapOptions;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
 use std::io::Read;
 use aligned_vec::*;
+
 //-----------------------------------------------------------------------------
 pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
@@ -142,6 +145,7 @@ pub fn seq_vec_read_all(fname: &str, chunk_size: u64, filebuf: &mut [u8]) -> std
     Ok(e)
 }
 //-----------------------------------------------------------------------------
+#[cfg(feature="seq_glommio_read")]
 pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let ex = LocalExecutor::default();
@@ -162,6 +166,7 @@ pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
     })
 }
 //-----------------------------------------------------------------------------
+#[cfg(feature="async_glommio_read")]
 pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let ex = LocalExecutor::default();

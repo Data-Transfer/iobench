@@ -3,7 +3,6 @@
 use memmap2::MmapOptions;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
-use aligned_vec::*;
 use std::io::Write;
 //-----------------------------------------------------------------------------
 pub fn seq_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {

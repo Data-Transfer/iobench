@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 memmap2 = "0.5"
 page_size = "0.4"
-futures = "0.3"
-glommio = "0.7"
+#futures = "0.3"
+#always slower than other options on all systems
+#glommio = "0.7"
 libc = "0.2"
 aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
 
@@ -25,8 +26,8 @@ seq_buf_read_all=[]
 seq_mmap_read=[]
 seq_mmap_read_all=[]
 seq_vec_read_all=[]
-seq_glommio_read=[]
-async_glommio_read=[]
+#seq_glommio_read=[]
+#async_glommio_read=[]
 all_read=[
      "seq_read",
      "seq_read_all",
@@ -36,8 +37,9 @@ all_read=[
      "seq_mmap_read",
      "seq_mmap_read_all",
      "seq_vec_read_all",
-     "seq_glommio_read",
-     "async_glommio_read"]
+#     "seq_glommio_read",
+#     "async_glommio_read"
+]
 
 seq_write=[]
 seq_write_all=[]
