@@ -1,5 +1,6 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
 use iobench::read::*;
+use aligned_vec::*;
 //-----------------------------------------------------------------------------
 fn main() -> std::io::Result<()> {
     let fname = &std::env::args().nth(1).expect("Missing file name");
@@ -8,7 +9,9 @@ fn main() -> std::io::Result<()> {
         .expect("Missing chunk size")
         .parse::<u64>()
         .expect("Wrong file size");
-    let fsize = (std::fs::metadata(fname)?.len() as f64) / 0x40000000 as f64;
+    let fsize = std::fs::metadata(&fname)?.len() as f64;
+    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    let fsize = fsize / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB",
         fsize,
@@ -22,12 +25,12 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "seq_read_all")]
     println!(
         "seq_read_all:\t\t\t {:.2} GiB/s",
-        fsize / seq_read_all(fname, chunk_size)?.as_secs_f64()
+        fsize / seq_read_all(fname, chunk_size, &mut filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_read_direct_all")]
     println!(
         "seq_read_direct_all:\t\t {:.2} GiB/s",
-        fsize / seq_read_direct_all(fname, chunk_size)?.as_secs_f64()
+        fsize / seq_read_direct_all(fname, chunk_size, &mut filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_buf_read")]
     println!(
@@ -37,7 +40,7 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "seq_buf_read_all")]
     println!(
         "seq_buf_read_all:\t\t {:.2} GiB/s",
-        fsize / seq_buf_read_all(fname, chunk_size)?.as_secs_f64()
+        fsize / seq_buf_read_all(fname, chunk_size, &mut filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_mmap_read")]
     println!(
@@ -47,12 +50,12 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "seq_mmap_read_all")]
     println!(
         "seq_mmap_read_all:\t\t {:.2} GiB/s",
-        fsize / seq_mmap_read_all(fname, chunk_size)?.as_secs_f64()
+        fsize / seq_mmap_read_all(fname, chunk_size, &mut filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_vec_read_all")]
     println!(
         "seq_vec_read_all:\t\t {:.2} GiB/s",
-        fsize / seq_vec_read_all(fname, chunk_size)?.as_secs_f64()
+        fsize / seq_vec_read_all(fname, chunk_size, &mut filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_glommio_read")]
     println!(

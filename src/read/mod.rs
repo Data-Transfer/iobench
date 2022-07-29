@@ -24,25 +24,24 @@ pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
-    let fsize = std::fs::metadata(fname)?.len();
+pub fn seq_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+    let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let mut file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    //let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let t = Instant::now();
     while r < fsize {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
         r += file.read(&mut filebuf[b..e])? as u64;
-        //r += chunk_size;
     }
     let e = t.elapsed();
-    dump(&filebuf)?;
+    dump(filebuf)?;
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_read_direct_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
-    let fsize = std::fs::metadata(fname)?.len();
+pub fn seq_read_direct_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+    let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let mut file = OpenOptions::new()
         .read(true)
@@ -54,8 +53,6 @@ pub fn seq_read_direct_all(fname: &str, chunk_size: u64) -> std::io::Result<Dura
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
         r += file.read(&mut filebuf[b..e])? as u64;
-        //file.read_exact(&mut filebuf[b..e])?;
-        //r += chunk_size;
     }
     let e = t.elapsed();
     dump(&filebuf)?;
@@ -82,22 +79,19 @@ pub fn seq_buf_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_buf_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
-    let fsize = std::fs::metadata(fname)?.len();
+pub fn seq_buf_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+    let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut br = std::io::BufReader::new(file);
     let t = Instant::now();
     while r < fsize {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
         r += br.read(&mut filebuf[b..e])? as u64;
-        //br.read_exact(&mut filebuf[b..e])?;
-        //r += chunk_size;
     }
     let e = t.elapsed();
-    dump(&filebuf)?;
+    dump(filebuf)?;
     Ok(e)
 }
 //-----------------------------------------------------------------------------
@@ -122,10 +116,9 @@ pub fn seq_mmap_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> 
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_mmap_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
-    let fsize = std::fs::metadata(fname)?.len();
+pub fn seq_mmap_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+    let fsize = filebuf.len() as u64;
     let file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mmap = unsafe { MmapOptions::new().map(&file)? };
     let mut r = 0_u64;
     let t = Instant::now();
@@ -136,16 +129,15 @@ pub fn seq_mmap_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Durati
         r += chunk_size;
     }
     let e = t.elapsed();
-    dump(&filebuf)?;
+    dump(filebuf)?;
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_vec_read_all(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
-    let fsize = std::fs::metadata(fname)?.len();
+pub fn seq_vec_read_all(fname: &str, chunk_size: u64, filebuf: &mut [u8]) -> std::io::Result<Duration> {
     let file = std::fs::File::open(fname)?;
-    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let t = Instant::now();
-    read_slice(&file, &mut filebuf, chunk_size)?;
+    use crate::vec_io;
+    vec_io::read_vec_slice(&file, filebuf, chunk_size)?;
     let e = t.elapsed();
     Ok(e)
 }
@@ -175,7 +167,7 @@ pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Durat
     let ex = LocalExecutor::default();
     ex.run(async {
         let mut r = 0_u64;
-    let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+        let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
         let file = BufferedFile::open(fname).await?;
         let t = Instant::now();
         let mut f = Vec::with_capacity(((fsize + chunk_size) / chunk_size) as usize);
@@ -200,42 +192,3 @@ fn dump(v: &[u8]) -> std::io::Result<()> {
     let _ = f.write(&v[..1]);
     Ok(())
 }
-//-----------------------------------------------------------------------------
-// Cannot pass a Vec of mutable references to readv built at runtime.
-// Adding a function that breaks a slice into an array of IoVecs and passes it
-// to the readv function
-// ----------------------------------------------------------------------------
-use std::os::raw::{c_int, c_void};
-use std::os::unix::io::{AsRawFd, RawFd};
-type size_t = usize;
-#[repr(C)]
-struct IoVec {
-    iov_base: *mut c_void,
-    iov_len: size_t,
-
-}
-
-extern {
-    fn readv(fd: RawFd, bufs: *const IoVec, count: c_int) -> c_int;
-}
-
-fn read_slice(file: &std::fs::File, buf: &mut [u8], chunk_size: u64) -> std::io::Result<()> {
-    let fd = file.as_raw_fd();
-    let mut iovecs = Vec::new();
-    let mut r = 0_usize;
-    while r < buf.len() {
-        let b = r;
-        let e = (b + chunk_size as usize).min(buf.len());
-        let iovec = IoVec {iov_base: buf[b..e].as_mut_ptr() as *mut c_void, iov_len: (e - b) as size_t};
-        iovecs.push(iovec);
-        r += chunk_size as usize;
-    }
-    unsafe { 
-        if readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int) < 0 {
-           Err(std::io::Error::last_os_error()) 
-        } else {
-            Ok(())
-        }
-    }
-}
-

@@ -21,27 +21,24 @@ pub fn seq_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Resu
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+pub fn seq_write_all(fname: &str, chunk_size: u64, num_chunks: u64, filebuf: &[u8]) -> std::io::Result<Duration> {
     let mut file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
-    let fsize = num_chunks * chunk_size;
-    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut r = 0_u64;
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
         let e = b + (chunk_size as usize);
         r += file.write(&filebuf[b..e])? as u64;
-        //r += chunk_size;
     }
     file.flush()?;
     let e = t.elapsed();
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64, filebuf: &[u8]) -> std::io::Result<Duration> {
     let mut r = 0_u64;
     let mut file = OpenOptions::new()
         .create(true)
@@ -49,13 +46,11 @@ pub fn seq_write_direct_all(fname: &str, chunk_size: u64, num_chunks: u64) -> st
         .custom_flags(libc::O_DIRECT)
         .open(fname)?;
     let fsize = num_chunks * chunk_size;
-    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
         r += file.write(&filebuf[b..e])? as u64;
-        //r += chunk_size;
     }
     file.flush()?;
     let e = t.elapsed();
@@ -79,21 +74,19 @@ pub fn seq_buf_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+pub fn seq_buf_write_all(fname: &str, chunk_size: u64, num_chunks: u64, filebuf: &[u8]) -> std::io::Result<Duration> {
     let mut r = 0_u64;
     let file = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .open(fname)?;
     let fsize = chunk_size * num_chunks;
-    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut br = std::io::BufWriter::new(&file);
     let t = Instant::now();
     for _ in 0..num_chunks {
         let b = r as usize;
         let e = (b + (chunk_size as usize)).min(fsize as usize);
         r += br.write(&filebuf[b..e])? as u64;
-        //r += chunk_size;
     }
     br.flush()?;
     let e = t.elapsed();
@@ -122,7 +115,7 @@ pub fn seq_mmap_write(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io:
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64, filebuf: &[u8]) -> std::io::Result<Duration> {
     let mut r = 0_u64;
     let mut file = std::fs::OpenOptions::new()
                     .read(true)
@@ -130,7 +123,6 @@ pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std:
                     .create(true)
                     .open(fname)?;
     let fsize = num_chunks * chunk_size;
-    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
     let mut mmap = unsafe { MmapOptions::new().len(fsize as usize).map_mut(&file)? };
     let t = Instant::now();
     for _ in 0..num_chunks {
@@ -144,25 +136,15 @@ pub fn seq_mmap_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std:
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_vec_write_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
-    let mut r = 0_u64;
+pub fn seq_vec_write_all(fname: &str, chunk_size: u64, filebuf: &[u8]) -> std::io::Result<Duration> {
     let mut file = std::fs::OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)
                     .open(fname)?;
-    let fsize = num_chunks * chunk_size;
-    let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    use vecio::Rawv;
-    let mut iovec = vec![];
-    for _ in 0..num_chunks {
-        let b = r as usize;
-        let e = b + (chunk_size as usize);
-        iovec.push(&filebuf[b..e]);
-        r += chunk_size;
-    }
     let t = Instant::now();
-    file.writev(&iovec)?;
+    use crate::vec_io;
+    vec_io::write_vec_slice(&file, filebuf, chunk_size)?;
     file.flush()?;
     let e = t.elapsed();
     Ok(e)
@@ -175,3 +157,4 @@ pub fn seq_glommio_read(_fname: &str, _chunk_size: u64, _num_chunks: u64) -> std
 pub fn async1_seq_glommio_read(_fname: &str, _chunk_size: u64, _num_chunks: u64) -> std::io::Result<Duration> {
     todo!()
 }
+

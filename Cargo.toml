@@ -9,7 +9,6 @@ page_size = "0.4"
 futures = "0.3"
 glommio = "0.7"
 libc = "0.2"
-vecio = "*"
 aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
 
 [profile.release]
