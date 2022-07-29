@@ -1,4 +1,4 @@
-
+use std::time::{Instant, Duration};
 struct Movable<T>(*const T);
 impl<T> Movable<T> {
     fn get(&self) -> Option<*const T> {
@@ -21,12 +21,13 @@ impl<T> MovableMut<T> {
 
 unsafe impl<T> Send for Movable<T> {}
 unsafe impl<T> Send for MovableMut<T> {}
-pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mut [u8]) -> std::io::Result<()> {
+pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mut [u8]) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut file = std::fs::File::open(fname);
     let fd = file.as_raw_fd();
     let mut threads =  Vec::new();
     let thread_span = fsize / num_threads;
+    let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
         let b = MovableMut(filebuf.as_mut_ptr().offset(offset));
@@ -51,7 +52,8 @@ pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mu
     for t in threads {
         let _ = t.join();
     }
-    Ok(())
+    let e = t.elapsed();
+    Ok(e)
 }
 
 use std::os::raw::c_void;
