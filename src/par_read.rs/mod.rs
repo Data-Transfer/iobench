@@ -1,4 +1,26 @@
 
+struct Movable<T>(*const T);
+impl<T> Movable<T> {
+    fn get(&self) -> Option<*const T> {
+        if self.0.is_null() {
+            return None;
+        }
+        Some(self.0)
+    }
+}
+
+struct MovableMut<T>(*mut T);
+impl<T> MovableMut<T> {
+    fn get(&self) -> Option<*mut T> {
+        if self.0.is_null() {
+            return None;
+        }
+        Some(self.0)
+    }
+}
+
+unsafe impl<T> Send for Movable<T> {}
+unsafe impl<T> Send for MovableMut<T> {}
 pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mut [u8]) -> std::io::Result<()> {
     let fsize = filebuf.len() as u64;
     let mut file = std::fs::File::open(fname);
@@ -7,6 +29,7 @@ pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mu
     let thread_span = fsize / num_threads;
     for i in 0..num_threads {
         let offset = thread_span * i;
+        let b = MovableMut(filebuf.as_mut_ptr().offset(offset));
         let th = std::thread::spawn(move || {
             let ptr = b.get().unwrap();
             let cs = chunk_size.min(fsize.len() - idx * chunk_size);
@@ -23,7 +46,11 @@ pub fn par_read_all(fname: &str, chunk_size: u64; num_threads: u64, filebuf: &mu
             }
 
        }); 
-    } 
+        threads.push(th);
+    }
+    for t in threads {
+        let _ = t.join();
+    }
     Ok(())
 }
 
