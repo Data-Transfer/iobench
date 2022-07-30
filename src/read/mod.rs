@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
 use std::io::Read;
 use aligned_vec::*;
+use crate::utility::dump;
 
 //-----------------------------------------------------------------------------
 pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
@@ -189,11 +190,4 @@ pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Durat
         dump(&filebuf)?;
         Ok(e)
     })
-}
-//----------j------------------------------------------------------------------
-fn dump(v: &[u8]) -> std::io::Result<()> {
-    use std::io::Write;
-    let mut f = std::fs::File::open("/dev/null")?;
-    let _ = f.write(&v[..1]);
-    Ok(())
 }

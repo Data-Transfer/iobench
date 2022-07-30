@@ -23,7 +23,23 @@ fn main() -> std::io::Result<()> {
     );
     println!(
         "par_read_all:\t\t\t {:.2} GiB/s",
-        fsize / par_mmap_read_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
+        fsize / par_read_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
+    );
+    println!(
+        "par_read_buf_all:\t\t {:.2} GiB/s",
+        fsize / par_read_buf_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
+    );
+    println!(
+        "par_read_direct_all:\t\t {:.2} GiB/s",
+        fsize / par_read_buf_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
+    );
+    println!(
+        "par_read_pread_all:\t\t {:.2} GiB/s",
+        fsize / par_read_pread_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
+    );
+    println!(
+        "par_read_mmap_all:\t\t {:.2} GiB/s",
+        fsize / par_read_mmap_all(fname, chunk_size, num_threads,  &mut filebuf)?.as_secs_f64()
     );
     Ok(())
 }
