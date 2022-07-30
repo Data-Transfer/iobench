@@ -25,7 +25,7 @@ pub fn read_vec_slice(
             iov_len: (e - b) as size_t,
         };
         iovecs.push(iovec);
-        r += chunk_size as usize;
+        r += e - b;
     }
     unsafe {
         if readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int) < 0 {

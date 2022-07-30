@@ -1,3 +1,4 @@
+#RUSTFLAGS="-C target-cpu=native -C target-feature=+crt-static" cargo build --release 
 [package]
 name = "iobench"
 version = "0.1.0"
