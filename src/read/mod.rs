@@ -1,13 +1,13 @@
 //! Read from file using a variety of APIs.
-#[cfg(any(feature="async_glommio_read", feature="seq_glommio_read"))]
+#[cfg(any(feature = "async_glommio_read", feature = "seq_glommio_read"))]
 use glommio::{io::BufferedFile, LocalExecutor};
 
+use crate::utility::dump;
+use aligned_vec::*;
 use memmap2::MmapOptions;
+use std::io::Read;
 use std::time::{Duration, Instant};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
-use std::io::Read;
-use aligned_vec::*;
-use crate::utility::dump;
 
 //-----------------------------------------------------------------------------
 pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
@@ -28,7 +28,7 @@ pub fn seq_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+pub fn seq_read_all(fname: &str, chunk_size: u64, filebuf: &mut [u8]) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let mut file = std::fs::File::open(fname)?;
@@ -44,7 +44,11 @@ pub fn seq_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io:
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_read_direct_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+pub fn seq_read_direct_all(
+    fname: &str,
+    chunk_size: u64,
+    filebuf: &mut [u8],
+) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let mut file = OpenOptions::new()
@@ -64,7 +68,7 @@ pub fn seq_read_direct_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> s
 }
 
 //-----------------------------------------------------------------------------
-pub fn seq_buf_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
+pub fn seq_read_buf(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
@@ -83,7 +87,11 @@ pub fn seq_buf_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_buf_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+pub fn seq_read_buf_all(
+    fname: &str,
+    chunk_size: u64,
+    filebuf: &mut [u8],
+) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
@@ -99,7 +107,7 @@ pub fn seq_buf_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std:
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_mmap_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
+pub fn seq_read_mmap(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let mut r = 0_u64;
     let file = std::fs::File::open(fname)?;
@@ -120,7 +128,11 @@ pub fn seq_mmap_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> 
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_mmap_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std::io::Result<Duration> {
+pub fn seq_read_mmap_all(
+    fname: &str,
+    chunk_size: u64,
+    filebuf: &mut [u8],
+) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let file = std::fs::File::open(fname)?;
     let mmap = unsafe { MmapOptions::new().map(&file)? };
@@ -137,7 +149,11 @@ pub fn seq_mmap_read_all(fname: &str, chunk_size: u64, filebuf: &mut[u8]) -> std
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-pub fn seq_vec_read_all(fname: &str, chunk_size: u64, filebuf: &mut [u8]) -> std::io::Result<Duration> {
+pub fn seq_read_vec_all(
+    fname: &str,
+    chunk_size: u64,
+    filebuf: &mut [u8],
+) -> std::io::Result<Duration> {
     let file = std::fs::File::open(fname)?;
     let t = Instant::now();
     use crate::vec_io;
@@ -146,7 +162,7 @@ pub fn seq_vec_read_all(fname: &str, chunk_size: u64, filebuf: &mut [u8]) -> std
     Ok(e)
 }
 //-----------------------------------------------------------------------------
-#[cfg(feature="seq_glommio_read")]
+#[cfg(feature = "seq_glommio_read")]
 pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let ex = LocalExecutor::default();
@@ -167,7 +183,7 @@ pub fn seq_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duratio
     })
 }
 //-----------------------------------------------------------------------------
-#[cfg(feature="async_glommio_read")]
+#[cfg(feature = "async_glommio_read")]
 pub fn async_glommio_read(fname: &str, chunk_size: u64) -> std::io::Result<Duration> {
     let fsize = std::fs::metadata(fname)?.len();
     let ex = LocalExecutor::default();

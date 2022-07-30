@@ -1,6 +1,6 @@
 //! Read/Write files using a variety of APIs in serial and parallel mode
-use iobench::write::*;
 use aligned_vec::*;
+use iobench::write::*;
 //-----------------------------------------------------------------------------
 fn main() -> std::io::Result<()> {
     let fname = &std::env::args().nth(1).expect("Missing file name");
@@ -14,9 +14,9 @@ fn main() -> std::io::Result<()> {
         .expect("Missing number of chunks")
         .parse::<u64>()
         .expect("Wrong number of chunk size");
-    let fsize = std::fs::metadata(&fname)?.len() as f64;
+    let fsize = num_chunks * chunk_size;
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    let fsize = fsize / 0x40000000 as f64;
+    let fsize = fsize as f64 / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB",
         fsize,
@@ -37,30 +37,30 @@ fn main() -> std::io::Result<()> {
         "seq_write_direct_all:\t\t {:.2} GiB/s",
         fsize / seq_write_direct_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_buf_write")]
+    #[cfg(feature = "seq_write_buf")]
     println!(
-        "seq_buf_write:\t\t\t {:.2} GiB/s",
-        fsize / seq_buf_write(fname, chunk_size, num_chunks)?.as_secs_f64()
+        "seq_write_buf:\t\t\t {:.2} GiB/s",
+        fsize / seq_write_buf(fname, chunk_size, num_chunks)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_buf_write_all")]
+    #[cfg(feature = "seq_write_buf_all")]
     println!(
-        "seq_buf_write_all:\t\t {:.2} GiB/s",
-        fsize / seq_buf_write_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
+        "seq_write_buf_all:\t\t {:.2} GiB/s",
+        fsize / seq_write_buf_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_mmap_read")]
+    #[cfg(feature = "seq_write_mmap")]
     println!(
-        "seq_mmap_write:\t\t\t {:.2} GiB/s",
-        fsize / seq_mmap_write(fname, chunk_size, num_chunks)?.as_secs_f64()
+        "seq_write_mmap:\t\t\t {:.2} GiB/s",
+        fsize / seq_write_mmap(fname, chunk_size, num_chunks)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_mmap_write_all")]
+    #[cfg(feature = "seq_write_mmap_all")]
     println!(
-        "seq_mmap_write_all:\t\t {:.2} GiB/s",
-        fsize / seq_mmap_write_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
+        "seq_write_mmap_all:\t\t {:.2} GiB/s",
+        fsize / seq_write_mmap_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_vec_write_all")]
+    #[cfg(feature = "seq_write_vec_all")]
     println!(
-        "seq_vec_write_all:\t\t {:.2} GiB/s",
-        fsize / seq_vec_write_all(fname, chunk_size, &filebuf)?.as_secs_f64()
+        "seq_write_vec_all:\t\t {:.2} GiB/s",
+        fsize / seq_write_vec_all(fname, chunk_size, &filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_glommio_write")]
     println!(

@@ -12,6 +12,7 @@ page_size = "0.4"
 libc = "0.2"
 aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
 par_seq = {git = "https://github.com/uv-rust/par_seq"}
+
 [profile.release]
 lto = true
 codegen-units = 1
@@ -20,45 +21,61 @@ codegen-units = 1
 seq_read=[]
 seq_read_all=[]
 seq_read_direct_all=[]
-seq_buf_read=[]
-seq_buf_read_all=[]
-seq_mmap_read=[]
-seq_mmap_read_all=[]
-seq_vec_read_all=[]
+seq_read_buf=[]
+seq_read_buf_all=[]
+seq_read_mmap=[]
+seq_read_mmap_all=[]
+seq_read_vec_all=[]
 #seq_glommio_read=[]
 #async_glommio_read=[]
 all_read=[
      "seq_read",
      "seq_read_all",
      "seq_read_direct_all",
-     "seq_buf_read",
-     "seq_buf_read_all",
-     "seq_mmap_read",
-     "seq_mmap_read_all",
-     "seq_vec_read_all",
+     "seq_read_buf",
+     "seq_read_buf_all",
+     "seq_read_mmap",
+     "seq_read_mmap_all",
+     "seq_read_vec_all",
 #     "seq_glommio_read",
 #     "async_glommio_read"
 ]
+par_read_all = []
+par_read_buf_all = []
+par_read_direct_all = []
+par_read_mmap_all = []
+par_read_pread_all = []
+par_read_vec_all = []
+all_par_read = [
+    "par_read_all",
+    "par_read_buf_all",
+    "par_read_direct_all",
+    "par_read_mmap_all",
+    "par_read_pread_all",
+    "par_read_vec_all"
+]
+
 
 seq_write=[]
 seq_write_all=[]
 seq_write_direct_all=[]
-seq_buf_write=[]
-seq_buf_write_all=[]
-seq_mmap_write=[]
-seq_mmap_write_all=[]
-seq_vec_write_all=[]
+seq_write_buf=[]
+seq_write_buf_all=[]
+seq_write_mmap=[]
+seq_write_mmap_all=[]
+seq_write_vec_all=[]
 # seq_glommio_write=[]
 # async_glommio_write=[]
 all_write=[
      "seq_write",
      "seq_write_all",
      "seq_write_direct_all",
-     "seq_buf_write",
-     "seq_buf_write_all",
-     "seq_mmap_write",
-     "seq_vec_write_all",
-     "seq_mmap_write_all"]
+     "seq_write_buf",
+     "seq_write_buf_all",
+     "seq_write_mmap",
+     "seq_write_mmap_all",
+     "seq_write_vec_all",
      # "seq_glommio_write",
      # "async_glommio_write"]
-default = ["all_read", "all_write"]
+]
+default = ["all_read", "all_write", "all_par_read"]
