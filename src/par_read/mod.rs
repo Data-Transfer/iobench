@@ -102,7 +102,7 @@ pub fn par_mmap_read_all(fname: &str, chunk_size: u64, num_threads: u64, filebuf
                 let sb = b + offset as usize;
                 let se = e + offset as usize;
                 slice[b..e].copy_from_slice(&mmap[sb..se]); 
-                r += b - e;
+                r += e - b;
             }
             Ok(())
         }); 
