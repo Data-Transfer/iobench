@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
+use std::os::raw::{c_int, c_void};
 use std::os::unix::io::RawFd;
-use std::os::raw::{c_void, c_int};
 pub struct Movable<T>(pub *const T);
 impl<T> Movable<T> {
     pub fn get(&self) -> Option<*const T> {

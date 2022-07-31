@@ -4,9 +4,9 @@
 // to the readv function
 // ----------------------------------------------------------------------------
 #![allow(non_snake_case)]
+use crate::utility::*;
 use std::os::raw::{c_int, c_void};
 use std::os::unix::io::AsRawFd;
-use crate::utility::*;
 
 // ----------------------------------------------------------------------------
 pub fn read_vec_slice(
@@ -31,8 +31,10 @@ pub fn read_vec_slice(
     unsafe {
         // @WARNING: partial reads possible, normally ok when total size < 2GiB
         let b = readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int);
-        if b != r as ssize_t  {
+        if b < 0 as ssize_t {
             Err(std::io::Error::last_os_error())
+        } else if b as usize != r {
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "Short read"))
         } else {
             Ok(())
         }
@@ -69,8 +71,16 @@ pub fn read_vec_slice_offset(
         r = e - b;
     }
     unsafe {
-        if preadv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int, offset as off_t) != r as ssize_t {
+        let b = preadv(
+            fd,
+            iovecs.as_ptr() as *const IoVec,
+            iovecs.len() as c_int,
+            offset as off_t,
+        );
+        if b < 0 as ssize_t {
             Err(std::io::Error::last_os_error())
+        } else if b as usize != r {
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "Short read"))
         } else {
             Ok(())
         }
@@ -93,8 +103,14 @@ pub fn write_vec_slice(file: &std::fs::File, buf: &[u8], chunk_size: u64) -> std
         r += chunk_size as usize;
     }
     unsafe {
-        if writev(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int) != r as ssize_t {
+        let b = writev(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int);
+        if b < 0 as ssize_t {
             Err(std::io::Error::last_os_error())
+        } else if b as usize != r {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Short write",
+            ))
         } else {
             Ok(())
         }
@@ -102,7 +118,12 @@ pub fn write_vec_slice(file: &std::fs::File, buf: &[u8], chunk_size: u64) -> std
 }
 
 // ----------------------------------------------------------------------------
-pub fn write_vec_slice_offset(file: &std::fs::File, buf: &[u8], chunk_size: u64, offset: off_t) -> std::io::Result<()> {
+pub fn write_vec_slice_offset(
+    file: &std::fs::File,
+    buf: &[u8],
+    chunk_size: u64,
+    offset: off_t,
+) -> std::io::Result<()> {
     let fd = file.as_raw_fd();
     let mut iovecs = Vec::new();
     let mut r = 0_usize;
@@ -117,8 +138,19 @@ pub fn write_vec_slice_offset(file: &std::fs::File, buf: &[u8], chunk_size: u64,
         r += chunk_size as usize;
     }
     unsafe {
-        if pwritev(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int, offset as off_t) != r as ssize_t {
+        let b = pwritev(
+            fd,
+            iovecs.as_ptr() as *const IoVec,
+            iovecs.len() as c_int,
+            offset as off_t,
+        );
+        if b < 0 as ssize_t {
             Err(std::io::Error::last_os_error())
+        } else if b as usize != r {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Short write",
+            ))
         } else {
             Ok(())
         }

@@ -1,4 +1,6 @@
+use crate::utility::*;
 use crate::utility::{dump, MovableMut};
+use crate::vec_io;
 use memmap2::MmapOptions;
 use std::io::Error as IOError;
 use std::io::ErrorKind as IOErrorKind;
@@ -6,8 +8,6 @@ use std::io::{Read, Seek, SeekFrom};
 use std::os::raw::c_void;
 use std::os::unix::io::AsRawFd;
 use std::time::{Duration, Instant};
-use crate::utility::*;
-use crate::vec_io;
 
 //-----------------------------------------------------------------------------
 pub fn par_read_all(
