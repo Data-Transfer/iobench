@@ -28,7 +28,7 @@ pub fn read_vec_slice(
         r += e - b;
     }
     unsafe {
-        if readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int) < 0 {
+        if readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int) < 0  {
             Err(std::io::Error::last_os_error())
         } else {
             Ok(())
@@ -41,7 +41,7 @@ pub fn read_vec_slice_offset(
     file: &std::fs::File,
     buf: &mut [u8],
     chunk_size: u64,
-    offset: isize
+    offset: isize,
 ) -> std::io::Result<()> {
     let fd = file.as_raw_fd();
     let mut iovecs = Vec::new();
@@ -54,10 +54,10 @@ pub fn read_vec_slice_offset(
             iov_len: (e - b) as size_t,
         };
         iovecs.push(iovec);
-        r += chunk_size as usize;
+        r = e - b;
     }
     unsafe {
-        if preadv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int, offset as off_t) < 0 {
+        if preadv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int, offset as off_t) != r as ssize_t {
             Err(std::io::Error::last_os_error())
         } else {
             Ok(())

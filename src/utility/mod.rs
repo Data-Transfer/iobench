@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types)]
 use std::os::unix::io::RawFd;
 use std::os::raw::{c_void, c_int};
 pub struct Movable<T>(pub *const T);
@@ -35,8 +36,8 @@ pub type ssize_t = isize;
 pub type size_t = usize;
 pub type off_t = isize;
 extern "C" {
-    pub fn pread(fd: RawFd, buf: *mut c_void, count: size_t, offset: off_t) -> ssize_t;
-    pub fn pwrite(fd: RawFd, buf: *mut c_void, count: size_t, offset: off_t) -> ssize_t;
+    pub fn pread(fd: RawFd, buf: *mut c_void, count: c_int, offset: off_t) -> ssize_t;
+    pub fn pwrite(fd: RawFd, buf: *mut c_void, count: c_int, offset: off_t) -> ssize_t;
 }
 
 #[repr(C)]
@@ -46,8 +47,8 @@ pub struct IoVec {
 }
 
 extern "C" {
-    pub fn readv(fd: RawFd, bufs: *const IoVec, count: c_int) -> c_int;
-    pub fn writev(fd: RawFd, bufs: *const IoVec, count: c_int) -> c_int;
-    pub fn preadv(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> c_int;
-    pub fn pwritev(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> c_int;
+    pub fn readv(fd: RawFd, bufs: *const IoVec, count: c_int) -> ssize_t;
+    pub fn writev(fd: RawFd, bufs: *const IoVec, count: c_int) -> ssize_t;
+    pub fn preadv(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> ssize_t;
+    pub fn pwritev(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> ssize_t;
 }

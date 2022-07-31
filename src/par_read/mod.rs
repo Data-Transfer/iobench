@@ -130,7 +130,7 @@ pub fn par_read_pread_all(
                     pread(
                         fd,
                         slice[b..e].as_ptr() as *mut c_void,
-                        sz as size_t,
+                        sz as i32,
                         (offset as usize + b) as off_t,
                     )
                 };
@@ -189,7 +189,7 @@ pub fn par_read_direct_all(
                     pread(
                         fd,
                         slice[b..e].as_ptr() as *mut c_void,
-                        sz as size_t,
+                        sz as i32,
                         (offset as usize + b) as off_t,
                     )
                 };
@@ -272,14 +272,14 @@ pub fn par_read_vec_all(
         let mb = unsafe { MovableMut(filebuf.as_mut_ptr().offset(offset as isize)) };
         let fname = fname.to_owned();
         let th = std::thread::spawn(move || {
-            let file = std::fs::File::open(&fname)?;
             let ptr = match mb.get() {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
+            let file = std::fs::File::open(&fname)?;
             let cs = thread_span.min(fsize - offset);
             let slice: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, cs as usize) };
-            vec_io::read_vec_slice_offset(&file, slice, cs, offset as isize)?;
+            vec_io::read_vec_slice_offset(&file, slice, chunk_size, offset as isize)?;
             Ok(())
         });
         threads.push(th);
