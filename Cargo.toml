@@ -93,5 +93,5 @@ all_par_write = [
     "par_write_pwrite_all",
     "par_write_vec_all"
 ]
-default = []
+default = ["seq_read_buf_all", "seq_write_buf_all", "par_read_buf_all"]
 all = ["all_read", "all_write", "all_par_read", "all_par_write"]

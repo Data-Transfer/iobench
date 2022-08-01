@@ -5,154 +5,267 @@
 // ----------------------------------------------------------------------------
 #![allow(non_snake_case)]
 use crate::utility::*;
+use std::io::Read;
+use std::io::Write;
 use std::os::raw::{c_int, c_void};
 use std::os::unix::io::AsRawFd;
 
-// ----------------------------------------------------------------------------
-pub fn read_vec_slice(
-    file: &std::fs::File,
-    buf: &mut [u8],
-    chunk_size: u64,
-) -> std::io::Result<()> {
-    let fd = file.as_raw_fd();
-    let mut iovecs = Vec::new();
-    let mut r = 0_usize;
-    while r < buf.len() {
-        let b = r;
-        let e = (b + chunk_size as usize).min(buf.len());
-        let iovec = IoVec {
-            iov_base: buf[b..e].as_mut_ptr() as *mut c_void,
-            iov_len: (e - b) as size_t,
-        };
-        println!("iovec size: {}", iovec.iov_len);
-        iovecs.push(iovec);
-        r += e - b;
-    }
-    unsafe {
-        // @WARNING: partial reads possible, normally ok when total size < 2GiB
-        let b = readv(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int);
-        if b < 0 as ssize_t {
-            Err(std::io::Error::last_os_error())
-        } else if b as usize != r {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Short read"))
-        } else {
-            Ok(())
-        }
-    }
+//------------------------------------------------------------------------------
+//pointer arithmetic
+#[inline]
+fn ptr_offset(p: *const c_void, offset: isize) -> *const c_void {
+    let pi = p as isize;
+    (pi + offset) as *const c_void
 }
-// for (;;) {
-//     written = writev(fd, iov+cur, count-cur);
-//     if (written < 0) goto error;
-//     while (cur < count && written >= iov[cur].iov_len)
-//         written -= iov[cur++].iov_len;
-//     if (cur == count) break;
-//     iov[cur].iov_base = (char *)iov[cur].iov_base + written;
-//     iov[cur].iov_len -= written;
+#[inline]
+fn ptr_offset_mut(p: *mut c_void, offset: isize) -> *mut c_void {
+    let pi = p as isize;
+    (pi + offset) as *mut c_void
+}
+// #[inline]
+// fn ptr_add(p: &mut *mut c_void, offset: isize) {
+//     let pi = *p as isize;
+//     *p = (pi + offset) as *mut c_void;
 // }
 
 // ----------------------------------------------------------------------------
-pub fn read_vec_slice_offset(
-    file: &std::fs::File,
+pub fn read_vec_slice(
+    file: &mut std::fs::File,
     buf: &mut [u8],
     chunk_size: u64,
-    offset: isize,
 ) -> std::io::Result<()> {
     let fd = file.as_raw_fd();
     let mut iovecs = Vec::new();
-    let mut r = 0_usize;
-    while r < buf.len() {
-        let b = r;
+    let mut bytes = 0_usize;
+    while bytes < buf.len() {
+        let b = bytes;
         let e = (b + chunk_size as usize).min(buf.len());
         let iovec = IoVec {
             iov_base: buf[b..e].as_mut_ptr() as *mut c_void,
             iov_len: (e - b) as size_t,
         };
         iovecs.push(iovec);
-        r = e - b;
+        bytes += e - b;
     }
     unsafe {
-        let b = preadv(
-            fd,
-            iovecs.as_ptr() as *const IoVec,
-            iovecs.len() as c_int,
-            offset as off_t,
-        );
-        if b < 0 as ssize_t {
-            Err(std::io::Error::last_os_error())
-        } else if b as usize != r {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Short read"))
-        } else {
-            Ok(())
+        // @WARNING: partial reads possible, normally ok when total size <= 2GiB
+        // Addressing partial reads in the case of equal chunk size. For generic
+        // case a list of offsets needs to be maintained but not in scope here.
+        let mut r = 0;
+        let mut iovec_offset = 0;
+        // At each iteration find the partially reead iovec, read the missing bytes and
+        // update the offset the element following the last one written.
+        // There should be one 4096 bytes write for each 2 GiB written.
+        while r < bytes && iovec_offset < iovecs.len() {
+            let b = readv(
+                fd,
+                iovecs[iovec_offset..].as_ptr() as *const IoVec,
+                (iovecs.len() - iovec_offset) as c_int,
+            );
+            if b < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            if b as usize == bytes {
+                break;
+            }
+            let ivec_rem = b % chunk_size as isize;
+            let nc = (b as usize + chunk_size as usize - 1) as usize / chunk_size as usize;
+            iovec_offset += nc;
+            let iv = &iovecs[iovec_offset - 1];
+            let d = if nc == iovecs.len() {
+                bytes - r
+            } else {
+                iv.iov_len - ivec_rem as usize
+            };
+            let base = ptr_offset_mut(iv.iov_base, (iv.iov_len - d) as isize) as *mut u8;
+            let len = d;
+            let s = std::slice::from_raw_parts_mut(base, len);
+            file.read_exact(s)?;
+            r += b as usize + s.len();
         }
     }
+    Ok(())
 }
 
 // ----------------------------------------------------------------------------
-pub fn write_vec_slice(file: &std::fs::File, buf: &[u8], chunk_size: u64) -> std::io::Result<()> {
+pub fn read_vec_slice_offset(
+    file: &mut std::fs::File,
+    buf: &mut [u8],
+    chunk_size: u64,
+    mut offset: isize,
+) -> std::io::Result<()> {
     let fd = file.as_raw_fd();
     let mut iovecs = Vec::new();
-    let mut r = 0_usize;
-    while r < buf.len() {
-        let b = r;
+    let mut bytes = 0_usize;
+    while bytes < buf.len() {
+        let b = bytes;
+        let e = (b + chunk_size as usize).min(buf.len());
+        let iovec = IoVec {
+            iov_base: buf[b..e].as_mut_ptr() as *mut c_void,
+            iov_len: (e - b) as size_t,
+        };
+        iovecs.push(iovec);
+        bytes += e - b;
+    }
+    unsafe {
+        // @WARNING: partial reads possible, normally ok when total size <= 2GiB
+        // Addressing partial reads in the case of equal chunk size. For generic
+        // case a list of offsets needs to be maintained but not in scope here.
+        let mut r = 0;
+        let mut iovec_offset = 0;
+        // At each iteration find the partially reead iovec, read the missing bytes and
+        // update the offset the element following the last one written.
+        // There should be one 4096 bytes write for each 2 GiB written.
+        while r < bytes && iovec_offset < iovecs.len() {
+            let b = preadv(
+                fd,
+                iovecs[iovec_offset..].as_ptr() as *const IoVec,
+                (iovecs.len() - iovec_offset) as c_int,
+                offset,
+            );
+            if b < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            if b as usize == bytes {
+                break;
+            }
+            let ivec_rem = b % chunk_size as isize;
+            let nc = (b as usize + chunk_size as usize - 1) as usize / chunk_size as usize;
+            iovec_offset += nc;
+            let iv = &iovecs[iovec_offset - 1];
+            let d = if nc == iovecs.len() {
+                bytes - r
+            } else {
+                iv.iov_len - ivec_rem as usize
+            };
+            let base = ptr_offset_mut(iv.iov_base, (iv.iov_len - d) as isize) as *mut u8;
+            let len = d;
+            let s = std::slice::from_raw_parts_mut(base, len);
+            file.read_exact(s)?;
+            r += b as usize + s.len();
+            offset = r as isize;
+        }
+    }
+    Ok(())
+}
+
+// ----------------------------------------------------------------------------
+pub fn write_vec_slice(
+    file: &mut std::fs::File,
+    buf: &[u8],
+    chunk_size: u64,
+) -> std::io::Result<()> {
+    let fd = file.as_raw_fd();
+    let mut iovecs = Vec::new();
+    let mut bytes = 0_usize;
+    while bytes < buf.len() {
+        let b = bytes;
         let e = (b + chunk_size as usize).min(buf.len());
         let iovec = IoVec {
             iov_base: buf[b..e].as_ptr() as *mut c_void,
             iov_len: (e - b) as size_t,
         };
         iovecs.push(iovec);
-        r += chunk_size as usize;
+        bytes += e - b;
     }
     unsafe {
-        let b = writev(fd, iovecs.as_ptr() as *const IoVec, iovecs.len() as c_int);
-        if b < 0 as ssize_t {
-            Err(std::io::Error::last_os_error())
-        } else if b as usize != r {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Short write",
-            ))
-        } else {
-            Ok(())
+        // @WARNING: partial writes possible, normally ok when total size <= 2GiB
+        // Addressing partial reads in the case of equal chunk size. For generic
+        // case a list of offsets needs to be maintained but not in scope here.
+        let mut w = 0;
+        let mut iovec_offset = 0;
+        // At each iteration find the partially written iovec, write the missing bytes and
+        // update the offset the element following the last one written.
+        // There should be one 4096 bytes write for each 2 GiB written.
+        while w < bytes && iovec_offset < iovecs.len() {
+            let b = writev(
+                fd,
+                iovecs[iovec_offset..].as_ptr() as *const IoVec,
+                (iovecs.len() - iovec_offset) as c_int,
+            );
+            if b < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            if b as usize == bytes {
+                break;
+            }
+            let ivec_rem = b % chunk_size as isize;
+            let nc = (b as usize + chunk_size as usize - 1) as usize / chunk_size as usize;
+            iovec_offset += nc;
+            let iv = &iovecs[iovec_offset - 1];
+            let d = if nc == iovecs.len() {
+                bytes - w
+            } else {
+                iv.iov_len - ivec_rem as usize
+            };
+            let base = ptr_offset(iv.iov_base, (iv.iov_len - d) as isize) as *const u8;
+            let len = d;
+            let s = std::slice::from_raw_parts(base, len);
+            file.write_all(&s)?;
+            w += b as usize + s.len();
         }
     }
+    Ok(())
 }
 
 // ----------------------------------------------------------------------------
 pub fn write_vec_slice_offset(
-    file: &std::fs::File,
+    file: &mut std::fs::File,
     buf: &[u8],
     chunk_size: u64,
-    offset: off_t,
+    mut offset: off_t,
 ) -> std::io::Result<()> {
     let fd = file.as_raw_fd();
     let mut iovecs = Vec::new();
-    let mut r = 0_usize;
-    while r < buf.len() {
-        let b = r;
+    let mut bytes = 0_usize;
+    while bytes < buf.len() {
+        let b = bytes;
         let e = (b + chunk_size as usize).min(buf.len());
         let iovec = IoVec {
             iov_base: buf[b..e].as_ptr() as *mut c_void,
             iov_len: (e - b) as size_t,
         };
         iovecs.push(iovec);
-        r += chunk_size as usize;
+        bytes += e - b;
     }
     unsafe {
-        let b = pwritev(
-            fd,
-            iovecs.as_ptr() as *const IoVec,
-            iovecs.len() as c_int,
-            offset as off_t,
-        );
-        if b < 0 as ssize_t {
-            Err(std::io::Error::last_os_error())
-        } else if b as usize != r {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Short write",
-            ))
-        } else {
-            Ok(())
+        // @WARNING: partial writes possible, normally ok when total size <= 2GiB
+        // Addressing partial reads in the case of equal chunk size. For generic
+        // case a list of offsets needs to be maintained but not in scope here.
+        let mut w = 0;
+        let mut iovec_offset = 0;
+        // At each iteration find the partially written iovec, write the missing bytes and
+        // update the offset the element following the last one written.
+        // There should be one 4096 bytes write for each 2 GiB written.
+        while w < bytes && iovec_offset < iovecs.len() {
+            let b = pwritev(
+                fd,
+                iovecs[iovec_offset..].as_ptr() as *const IoVec,
+                (iovecs.len() - iovec_offset) as c_int,
+                offset
+            );
+            if b < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            if b as usize == bytes {
+                break;
+            }
+            let ivec_rem = b % chunk_size as isize;
+            let nc = (b as usize + chunk_size as usize - 1) as usize / chunk_size as usize;
+            iovec_offset += nc;
+            let iv = &iovecs[iovec_offset - 1];
+            let d = if nc == iovecs.len() {
+                bytes - w
+            } else {
+                iv.iov_len - ivec_rem as usize
+            };
+            let base = ptr_offset(iv.iov_base, (iv.iov_len - d) as isize) as *const u8;
+            let len = d;
+            let s = std::slice::from_raw_parts(base, len);
+            file.write_all(&s)?;
+            w += b as usize + s.len();
+            offset = w as isize;
         }
     }
+    Ok(())
 }

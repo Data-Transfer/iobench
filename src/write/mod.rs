@@ -48,6 +48,12 @@ pub fn seq_write_direct_all(
     num_chunks: u64,
     filebuf: &[u8],
 ) -> std::io::Result<Duration> {
+    if chunk_size % 512 != 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "O_DIRECT requires a chunk size multiple of 512'",
+        ));
+    }
     let mut r = 0_u64;
     let mut file = OpenOptions::new()
         .create(true)
@@ -167,7 +173,7 @@ pub fn seq_write_vec_all(
         .open(fname)?;
     let t = Instant::now();
     use crate::vec_io;
-    vec_io::write_vec_slice(&file, filebuf, chunk_size)?;
+    vec_io::write_vec_slice(&mut file, filebuf, chunk_size)?;
     file.flush()?;
     let e = t.elapsed();
     Ok(e)

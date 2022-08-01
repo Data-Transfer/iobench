@@ -49,6 +49,12 @@ pub fn seq_read_direct_all(
     chunk_size: u64,
     filebuf: &mut [u8],
 ) -> std::io::Result<Duration> {
+    if chunk_size % 512 != 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "O_DIRECT requires a chunk size multiple of 512'",
+        ));
+    }
     let fsize = filebuf.len() as u64;
     let mut r = 0_u64;
     let mut file = OpenOptions::new()
@@ -154,10 +160,10 @@ pub fn seq_read_vec_all(
     chunk_size: u64,
     filebuf: &mut [u8],
 ) -> std::io::Result<Duration> {
-    let file = std::fs::File::open(fname)?;
+    let mut file = std::fs::File::open(fname)?;
     let t = Instant::now();
     use crate::vec_io;
-    vec_io::read_vec_slice(&file, filebuf, chunk_size)?;
+    vec_io::read_vec_slice(&mut file, filebuf, chunk_size)?;
     let e = t.elapsed();
     Ok(e)
 }

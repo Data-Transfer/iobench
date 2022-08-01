@@ -160,6 +160,12 @@ pub fn par_read_direct_all(
     num_threads: u64,
     filebuf: &mut [u8],
 ) -> std::io::Result<Duration> {
+    if chunk_size % 512 != 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "O_DIRECT requires a chunk size multiple of 512'",
+        ));
+    }
     let fsize = filebuf.len() as u64;
     use std::os::unix::fs::OpenOptionsExt;
     let file = std::fs::OpenOptions::new()
@@ -276,10 +282,10 @@ pub fn par_read_vec_all(
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let file = std::fs::File::open(&fname)?;
+            let mut file = std::fs::File::open(&fname)?;
             let cs = thread_span.min(fsize - offset);
             let slice: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, cs as usize) };
-            vec_io::read_vec_slice_offset(&file, slice, chunk_size, offset as isize)?;
+            vec_io::read_vec_slice_offset(&mut file, slice, chunk_size, offset as isize)?;
             Ok(())
         });
         threads.push(th);

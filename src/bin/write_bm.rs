@@ -15,7 +15,9 @@ fn main() -> std::io::Result<()> {
         .parse::<u64>()
         .expect("Wrong number of chunk size");
     let fsize = num_chunks * chunk_size;
+    let t = std::time::Instant::now();
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    println!("Initialization time: {:.2}", t.elapsed().as_secs_f64());
     let fsize = fsize as f64 / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB",
