@@ -18,7 +18,7 @@ pub fn par_read_all(
 ) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
@@ -62,7 +62,7 @@ pub fn par_read_buf_all(
 ) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads -1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
@@ -109,7 +109,7 @@ pub fn par_read_pread_all(
     let file = std::fs::File::open(fname)?;
     let fd = file.as_raw_fd();
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
@@ -130,7 +130,7 @@ pub fn par_read_pread_all(
                     pread(
                         fd,
                         slice[b..e].as_ptr() as *mut c_void,
-                        sz as i32,
+                        sz,
                         (offset as usize + b) as off_t,
                     )
                 };
@@ -174,7 +174,7 @@ pub fn par_read_direct_all(
         .open(fname)?;
     let fd = file.as_raw_fd();
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
@@ -195,7 +195,7 @@ pub fn par_read_direct_all(
                     pread(
                         fd,
                         slice[b..e].as_ptr() as *mut c_void,
-                        sz as i32,
+                        sz,
                         (offset as usize + b) as off_t,
                     )
                 };
@@ -228,7 +228,7 @@ pub fn par_read_mmap_all(
     let fsize = filebuf.len() as u64;
     let file = std::sync::Arc::new(std::fs::File::open(fname)?);
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;
@@ -271,7 +271,7 @@ pub fn par_read_vec_all(
 ) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut threads = Vec::new();
-    let thread_span = fsize / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;

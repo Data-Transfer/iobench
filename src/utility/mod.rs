@@ -36,8 +36,8 @@ pub type ssize_t = isize;
 pub type size_t = usize;
 pub type off_t = isize;
 extern "C" {
-    pub fn pread(fd: RawFd, buf: *mut c_void, count: c_int, offset: off_t) -> ssize_t;
-    pub fn pwrite(fd: RawFd, buf: *mut c_void, count: c_int, offset: off_t) -> ssize_t;
+    pub fn pread(fd: RawFd, buf: *mut c_void, count: size_t, offset: off_t) -> ssize_t;
+    pub fn pwrite(fd: RawFd, buf: *mut c_void, count: size_t, offset: off_t) -> ssize_t;
 }
 
 #[repr(C)]
