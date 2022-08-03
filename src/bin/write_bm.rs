@@ -64,11 +64,10 @@ fn main() -> std::io::Result<()> {
         "seq_write_vec_all:\t\t {:.2} GiB/s",
         fsize / seq_write_vec_all(fname, chunk_size, &filebuf)?.as_secs_f64()
     );
-    #[cfg(feature = "seq_glommio_write")]
     #[cfg(all(feature = "seq_write_uring_all", target_os = "linux"))]
     println!(
         "seq_write_uring_all:\t\t {:.2} GiB/s",
-        fsize / seq_write_uring(fname, chunk_size, num_chunks)?.as_secs_f64()
+        fsize / seq_write_uring_all(fname, chunk_size, num_chunks)?.as_secs_f64()
     );
     #[cfg(all(feature = "seq_write_uring_vec_all", target_os = "linux"))]
     println!(

@@ -79,13 +79,16 @@ par_write_direct_all = []
 par_write_mmap_all = []
 par_write_pwrite_all = []
 par_write_vec_all = []
+par_write_uring_all = []
+par_write_uring_vec_all = []
 all_par_write = [
     "par_write_all",
     "par_write_buf_all",
     "par_write_direct_all",
     "par_write_mmap_all",
     "par_write_pwrite_all",
-    "par_write_vec_all"
+    "par_write_vec_all",
+    "par_write_uring_vec_all"
 ]
 uring_direct = []
 default = []

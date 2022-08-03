@@ -68,5 +68,19 @@ fn main() -> std::io::Result<()> {
             / par_write_vec_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
                 .as_secs_f64()
     );
+    #[cfg(all(feature = "par_write_uring_all", target_os = "linux"))]
+    println!(
+        "par_write_uring_all:\t\t {:.2} GiB/s",
+        fsize
+            / par_write_uring_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
+    );
+    #[cfg(all(feature = "par_write_uring_vec_all", target_os = "linux"))]
+    println!(
+        "par_write_uring_vec_all:\t\t {:.2} GiB/s",
+        fsize
+            / par_write_uring_vec_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
+    );
     Ok(())
 }

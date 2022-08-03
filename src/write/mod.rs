@@ -1,6 +1,5 @@
 //! Write to file using a variety of APIs.
 //use glommio::{io::BufferedFile, LocalExecutor};
-use iou::*;
 use memmap2::MmapOptions;
 use std::io::Write;
 use std::time::{Duration, Instant};
@@ -179,28 +178,12 @@ pub fn seq_write_vec_all(
     let e = t.elapsed();
     Ok(e)
 }
-//-----------------------------------------------------------------------------
-pub fn seq_glommio_write(
-    _fname: &str,
-    _chunk_size: u64,
-    _num_chunks: u64,
-) -> std::io::Result<Duration> {
-    todo!()
-}
-//-----------------------------------------------------------------------------
-pub fn async1_seq_glommio_write(
-    _fname: &str,
-    _chunk_size: u64,
-    _num_chunks: u64,
-) -> std::io::Result<Duration> {
-    todo!()
-}
 
 //-----------------------------------------------------------------------------
 // @warning will normally fail for total size > (2GiB - 4kiB), limit imposed
 // by vectored i/o, so partial reads/writes must be handled
 #[cfg(all(feature = "seq_write_uring_all", target_os = "linux"))]
-pub fn seq_write_uring(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
+pub fn seq_write_uring_all(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io::Result<Duration> {
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
@@ -229,7 +212,7 @@ pub fn seq_write_uring(fname: &str, chunk_size: u64, num_chunks: u64) -> std::io
     if n != (chunk_size * num_chunks) as usize {
         return Err(std::io::Error::new(
             std::io::ErrorKind::Other,
-            &format!("seq_write_uring_all: Failed to write data from io_uring queue, requested: {}, written: {}", chunk_size * num_chunks, n).as_str())
+            format!("seq_write_uring_all: Failed to write data from io_uring queue, requested: {}, written: {}", chunk_size * num_chunks, n).as_str())
         );
     }
     file.flush()?;
@@ -278,7 +261,6 @@ pub fn seq_write_uring_vec_all(
             ))?;
             use std::os::unix::io::AsRawFd;
             sqe.prep_write_vectored(file.as_raw_fd(), &bufs, 0);
-            //sqe.set_user_data(0xDEADBEEF);
             io_uring.sq().submit()?;
         }
 
