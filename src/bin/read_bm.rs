@@ -12,7 +12,7 @@ fn main() -> std::io::Result<()> {
     let fsize = std::fs::metadata(&fname)?.len() as f64;
     let t = std::time::Instant::now();
     let mut filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    println!("Initialization time: {:.2}", t.elapsed().as_secs_f64());
+    println!("Initialization time: {:.2} s", t.elapsed().as_secs_f64());
     let fsize = fsize / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB",

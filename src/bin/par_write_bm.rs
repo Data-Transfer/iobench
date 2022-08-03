@@ -18,7 +18,9 @@ fn main() -> std::io::Result<()> {
         .nth(4)
         .map_or(1, |v| v.parse::<u64>().expect("Wrong num threads number"));
     let fsize = num_chunks * chunk_size;
+    let t = std::time::Instant::now();
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
+    println!("Initialization time: {:.2} s", t.elapsed().as_secs_f64());
     let fsize = fsize as f64 / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB, {} thread(s)",
@@ -34,28 +36,37 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "par_write_buf_all")]
     println!(
         "par_write_buf_all:\t\t {:.2} GiB/s",
-        fsize / par_write_buf_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?.as_secs_f64()
+        fsize
+            / par_write_buf_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
     );
     #[cfg(feature = "par_write_direct_all")]
     println!(
         "par_write_direct_all:\t\t {:.2} GiB/s",
-        fsize / par_write_direct_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?.as_secs_f64()
+        fsize
+            / par_write_direct_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
     );
     #[cfg(feature = "par_write_pwrite_all")]
     println!(
         "par_write_pwrite_all:\t\t {:.2} GiB/s",
-        fsize / par_write_pwrite_all(fname, chunk_size,  num_chunks, num_threads, &filebuf)?.as_secs_f64()
+        fsize
+            / par_write_pwrite_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
     );
     #[cfg(feature = "par_write_mmap_all")]
     println!(
         "par_write_mmap_all:\t\t {:.2} GiB/s",
-        fsize / par_write_mmap_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?.as_secs_f64()
+        fsize
+            / par_write_mmap_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
     );
     #[cfg(feature = "par_write_vec_all")]
     println!(
         "par_write_vec_all:\t\t {:.2} GiB/s",
-        fsize / par_write_vec_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?.as_secs_f64()
+        fsize
+            / par_write_vec_all(fname, chunk_size, num_chunks, num_threads, &filebuf)?
+                .as_secs_f64()
     );
     Ok(())
 }
-

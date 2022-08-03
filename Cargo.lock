@@ -7,7 +7,7 @@ name = "aligned_vec"
 version = "0.1.0"
 source = "git+https://github.com/uv-rust/aligned_vec#8345440c3542e691d0684f218c62ea553c35d684"
 dependencies = [
- "nix",
+ "nix 0.24.2",
  "page_size",
 ]
 
@@ -24,6 +24,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "cc"
+version = "1.0.73"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
+
+[[package]]
+name = "cfg-if"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -34,10 +46,23 @@ name = "iobench"
 version = "0.1.0"
 dependencies = [
  "aligned_vec",
+ "iou",
  "libc",
  "memmap2",
  "page_size",
  "par_seq",
+]
+
+[[package]]
+name = "iou"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22820ec519c7eb16f9ea64316062817963fae77652de6cd8e7655f97bf4fd6dc"
+dependencies = [
+ "bitflags",
+ "libc",
+ "nix 0.18.0",
+ "uring-sys",
 ]
 
 [[package]]
@@ -66,12 +91,24 @@ dependencies = [
 
 [[package]]
 name = "nix"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83450fe6a6142ddd95fb064b746083fc4ef1705fe81f64a64e1d4b39f54a1055"
+dependencies = [
+ "bitflags",
+ "cc",
+ "cfg-if 0.1.10",
+ "libc",
+]
+
+[[package]]
+name = "nix"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "195cdbc1741b8134346d515b3a56a1c94b0912758009cfd53f99ea0f57b065fc"
 dependencies = [
  "bitflags",
- "cfg-if",
+ "cfg-if 1.0.0",
  "libc",
  "memoffset",
 ]
@@ -90,6 +127,16 @@ dependencies = [
 name = "par_seq"
 version = "0.1.0"
 source = "git+https://github.com/uv-rust/par_seq#af02d0693f4f5edfc4091759c197b3499ef78d3e"
+
+[[package]]
+name = "uring-sys"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a0c460001a5aba8959d84d643a413a709b19871248651f912a264485da3324c"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "winapi"

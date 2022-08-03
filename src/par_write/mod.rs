@@ -3,7 +3,7 @@ use crate::vec_io;
 use memmap2::MmapOptions;
 use std::io::Error as IOError;
 use std::io::ErrorKind as IOErrorKind;
-use std::io::{Write, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom, Write};
 use std::os::raw::c_void;
 use std::os::unix::io::AsRawFd;
 use std::time::{Duration, Instant};
@@ -32,20 +32,19 @@ pub fn par_write_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let th = std::thread::spawn(move || {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .open(&fname)?;
+            let mut file = std::fs::OpenOptions::new().write(true).open(&fname)?;
             file.seek(SeekFrom::Start(offset))?;
             let ptr = match mb.get() {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let slice = unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
+            let slice =
+                unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
             let mut w = 0;
             let bytes = num_chunks * chunk_size;
             while w < bytes {
@@ -91,20 +90,19 @@ pub fn par_write_buf_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let th = std::thread::spawn(move || {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .open(&fname)?;
+            let mut file = std::fs::OpenOptions::new().write(true).open(&fname)?;
             file.seek(SeekFrom::Start(offset))?;
             let ptr = match mb.get() {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let slice = unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
+            let slice =
+                unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
             let mut w = 0;
             let bytes = num_chunks * chunk_size;
             use std::io::BufWriter;
@@ -152,9 +150,9 @@ pub fn par_write_direct_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let th = std::thread::spawn(move || {
             use std::os::unix::fs::OpenOptionsExt;
@@ -167,7 +165,8 @@ pub fn par_write_direct_all(
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let slice = unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
+            let slice =
+                unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
             let mut w = 0;
             let bytes = num_chunks * chunk_size;
             while w < bytes {
@@ -212,21 +211,20 @@ pub fn par_write_pwrite_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let fname = fname.to_owned();
         let th = std::thread::spawn(move || {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .open(&fname)?;
+            let mut file = std::fs::OpenOptions::new().write(true).open(&fname)?;
             let fd = file.as_raw_fd();
             let ptr = match mb.get() {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let slice = unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
+            let slice =
+                unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
             let mut w = 0;
             let bytes = num_chunks * chunk_size;
             while w < bytes {
@@ -286,12 +284,11 @@ pub fn par_write_mmap_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let th = std::thread::spawn(move || {
-            
             let mut file = std::fs::OpenOptions::new()
                 .read(true)
                 .write(true)
@@ -301,8 +298,14 @@ pub fn par_write_mmap_all(
                 Some(p) => p,
             };
             let bytes = num_chunks * chunk_size;
-            let slice = unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
-            let mut mmap = unsafe { MmapOptions::new().len(bytes as usize).offset(offset).map_mut(&file)? };
+            let slice =
+                unsafe { std::slice::from_raw_parts(ptr, (chunk_size * num_chunks) as usize) };
+            let mut mmap = unsafe {
+                MmapOptions::new()
+                    .len(bytes as usize)
+                    .offset(offset)
+                    .map_mut(&file)?
+            };
             let mut w = 0;
             while w < bytes {
                 let b = w as usize;
@@ -347,15 +350,13 @@ pub fn par_write_vec_all(
         //@todo: use fallocate
         {
             std::fs::OpenOptions::new()
-                 .write(true)
-                 .create(true)
-                 .open(&fname)?;
+                .write(true)
+                .create(true)
+                .open(&fname)?;
         }
         let fname = fname.to_owned();
         let th = std::thread::spawn(move || {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .open(&fname)?;
+            let mut file = std::fs::OpenOptions::new().write(true).open(&fname)?;
             let ptr = match mb.get() {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,

@@ -11,12 +11,12 @@ codegen-units = 1
 [dependencies]
 memmap2 = "0.5"
 page_size = "0.4"
-#futures = "0.3"
-#always slower than other options on all systems
-#glommio = "0.7"
 libc = "0.2"
 aligned_vec = {git="https://github.com/uv-rust/aligned_vec"}
 par_seq = {git = "https://github.com/uv-rust/par_seq"}
+
+[target.'cfg(target_os = "linux")'.dependencies]
+iou = "*"
 
 [features]
 seq_read=[]
@@ -27,8 +27,6 @@ seq_read_buf_all=[]
 seq_read_mmap=[]
 seq_read_mmap_all=[]
 seq_read_vec_all=[]
-#seq_glommio_read=[]
-#async_glommio_read=[]
 all_read=[
      "seq_read",
      "seq_read_all",
@@ -38,8 +36,6 @@ all_read=[
      "seq_read_mmap",
      "seq_read_mmap_all",
      "seq_read_vec_all",
-#     "seq_glommio_read",
-#     "async_glommio_read"
 ]
 par_read_all = []
 par_read_buf_all = []
@@ -65,8 +61,8 @@ seq_write_buf_all=[]
 seq_write_mmap=[]
 seq_write_mmap_all=[]
 seq_write_vec_all=[]
-# seq_glommio_write=[]
-# async_glommio_write=[]
+seq_write_uring_all=[]
+seq_write_uring_vec_all=[]
 all_write=[
      "seq_write",
      "seq_write_all",
@@ -76,8 +72,6 @@ all_write=[
      "seq_write_mmap",
      "seq_write_mmap_all",
      "seq_write_vec_all",
-     # "seq_glommio_write",
-     # "async_glommio_write"]
 ]
 par_write_all = []
 par_write_buf_all = []
@@ -93,5 +87,6 @@ all_par_write = [
     "par_write_pwrite_all",
     "par_write_vec_all"
 ]
-default = ["seq_read_buf_all", "seq_write_buf_all", "par_read_buf_all"]
+uring_direct = []
+default = []
 all = ["all_read", "all_write", "all_par_read", "all_par_write"]

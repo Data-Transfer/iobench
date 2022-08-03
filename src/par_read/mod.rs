@@ -62,7 +62,7 @@ pub fn par_read_buf_all(
 ) -> std::io::Result<Duration> {
     let fsize = filebuf.len() as u64;
     let mut threads = Vec::new();
-    let thread_span = (fsize + num_threads -1) / num_threads;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
         let offset = thread_span * i;

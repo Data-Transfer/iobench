@@ -242,7 +242,7 @@ pub fn write_vec_slice_offset(
                 fd,
                 iovecs[iovec_offset..].as_ptr() as *const IoVec,
                 (iovecs.len() - iovec_offset) as c_int,
-                offset
+                offset,
             );
             if b < 0 {
                 return Err(std::io::Error::last_os_error());

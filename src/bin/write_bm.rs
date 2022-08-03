@@ -17,7 +17,7 @@ fn main() -> std::io::Result<()> {
     let fsize = num_chunks * chunk_size;
     let t = std::time::Instant::now();
     let filebuf: Vec<u8> = page_aligned_vec(fsize as usize, fsize as usize, Some(0), false);
-    println!("Initialization time: {:.2}", t.elapsed().as_secs_f64());
+    println!("Initialization time: {:.2} s", t.elapsed().as_secs_f64());
     let fsize = fsize as f64 / 0x40000000 as f64;
     println!(
         "File size: {:.2} GiB, chunk size: {:.2} MiB",
@@ -65,14 +65,15 @@ fn main() -> std::io::Result<()> {
         fsize / seq_write_vec_all(fname, chunk_size, &filebuf)?.as_secs_f64()
     );
     #[cfg(feature = "seq_glommio_write")]
+    #[cfg(all(feature = "seq_write_uring_all", target_os = "linux"))]
     println!(
-        "seq_glommio_write:\t\t {:.2} GiB/s",
-        fsize / seq_glommio_write(fname, chunk_size, num_chunks)?.as_secs_f64()
+        "seq_write_uring_all:\t\t {:.2} GiB/s",
+        fsize / seq_write_uring(fname, chunk_size, num_chunks)?.as_secs_f64()
     );
-    #[cfg(feature = "async_glommio_write")]
+    #[cfg(all(feature = "seq_write_uring_vec_all", target_os = "linux"))]
     println!(
-        "async_glommio_write:\t\t {:.2} GiB/s",
-        fsize / async_glommio_write(fname, chunk_size, num_chunks)?.as_secs_f64()
+        "seq_write_uring_vec_all:\t {:.2} GiB/s",
+        fsize / seq_write_uring_vec_all(fname, chunk_size, num_chunks, &filebuf)?.as_secs_f64()
     );
     Ok(())
 }
