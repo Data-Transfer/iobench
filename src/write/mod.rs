@@ -247,6 +247,12 @@ pub fn seq_write_uring_vec_all(
     num_chunks: u64,
     filebuf: &[u8],
 ) -> std::io::Result<Duration> {
+    if chunk_size % 512 != 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "seq_write_uring_all: written: chunk size not aligned to 512"
+        ));
+    }
     let mut file = if cfg!(feature = "uring_direct") {
         std::fs::OpenOptions::new()
             .write(true)
