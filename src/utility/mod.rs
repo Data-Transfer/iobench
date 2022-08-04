@@ -52,3 +52,22 @@ extern "C" {
     pub fn preadv(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> ssize_t;
     pub fn pwritev(fd: RawFd, bufs: *const IoVec, count: c_int, offset: off_t) -> ssize_t;
 }
+
+macro_rules! join_and_check {
+    ($threads:expr) => {
+        for t in $threads {
+            match t.join() {
+                Err(e) => 
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Error joining thread: {:?}", e).as_str()
+                    )),
+                Ok(ret) => if let Err(e) = ret {
+                    return Err(e)
+                } 
+            }
+        }
+    }
+}
+pub(crate) use join_and_check;
+

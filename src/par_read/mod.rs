@@ -43,11 +43,7 @@ pub fn par_read_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)
@@ -88,11 +84,7 @@ pub fn par_read_buf_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)
@@ -143,11 +135,7 @@ pub fn par_read_pread_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)
@@ -208,11 +196,7 @@ pub fn par_read_direct_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)
@@ -253,11 +237,7 @@ pub fn par_read_mmap_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)
@@ -290,11 +270,7 @@ pub fn par_read_vec_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     dump(&filebuf)?;
     Ok(e)

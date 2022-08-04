@@ -57,11 +57,7 @@ pub fn par_write_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
@@ -117,11 +113,7 @@ pub fn par_write_buf_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
@@ -179,11 +171,7 @@ pub fn par_write_direct_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
@@ -249,13 +237,7 @@ pub fn par_write_pwrite_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
-    //file.sync_data();
-
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
@@ -318,11 +300,7 @@ pub fn par_write_mmap_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
@@ -369,12 +347,7 @@ pub fn par_write_vec_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
-    //file.sync_data();
+    join_and_check!(threads);
 
     let e = t.elapsed();
     Ok(e)
@@ -466,15 +439,11 @@ pub fn par_write_uring_vec_all(
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
-
+    join_and_check!(threads);
     let e = t.elapsed();
     Ok(e)
 }
+
 
 //-----------------------------------------------------------------------------
 // @warning will normally fail for total size > (2GiB - 4kiB), limit imposed
@@ -527,7 +496,7 @@ pub fn par_write_uring_all(
             };
             let bytes = num_chunks * chunk_size;
             let slice = unsafe { std::slice::from_raw_parts(ptr, bytes as usize) };
-            let entries = num_chunks as u32;
+            let entries = 1;
             let n = {
                 let mut io_uring = iou::IoUring::new(entries)?;
                 unsafe {
@@ -539,28 +508,23 @@ pub fn par_write_uring_all(
                     sqe.prep_write(file.as_raw_fd(), slice, offset);
                     io_uring.sq().submit()?;
                 }
-
                 let mut cq = io_uring.cq();
                 let cqe = cq.wait_for_cqe()?;
                 cqe.result()? as usize
             };
-            if n != (num_chunks * chunk_size) as usize {
+            if n != bytes as usize {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("seq_write_uring_all: Failed to write data from io_uring queue, requested: {}, written: {}", chunk_size * num_chunks, n).as_str()
                 ));
             }
-
             file.flush()?;
             Ok(())
         });
         threads.push(th);
     }
-    for t in threads {
-        if let Err(e) = t.join() {
-            return Err(IOError::new(IOErrorKind::Other, format!("{:?}", e)));
-        }
-    }
+
+    join_and_check!(threads);
 
     let e = t.elapsed();
     Ok(e)
