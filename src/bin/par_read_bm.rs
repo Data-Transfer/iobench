@@ -53,5 +53,16 @@ fn main() -> std::io::Result<()> {
         "par_read_vec_all:\t\t {:.2} GiB/s",
         fsize / par_read_vec_all(fname, chunk_size, num_threads, &mut filebuf)?.as_secs_f64()
     );
+    #[cfg(feature = "par_read_uring_all")]
+    println!(
+    "par_read_uring_all:\t\t {:.2} GiB/s",
+    fsize / par_read_uring_all(fname, chunk_size, num_threads, &mut filebuf)?.as_secs_f64()
+    );
+   
+    #[cfg(feature = "par_read_uring_vec_all")]
+    println!(
+        "par_read_iouring_vec_all:\t\t {:.2} GiB/s",
+        fsize / par_read_uring_vec_all(fname, chunk_size, num_threads, &mut filebuf)?.as_secs_f64()
+    );
     Ok(())
 }

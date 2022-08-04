@@ -27,6 +27,8 @@ seq_read_buf_all=[]
 seq_read_mmap=[]
 seq_read_mmap_all=[]
 seq_read_vec_all=[]
+seq_read_uring_all=[]
+seq_read_uring_vec_all=[]
 all_read=[
      "seq_read",
      "seq_read_all",
@@ -43,6 +45,8 @@ par_read_direct_all = []
 par_read_mmap_all = []
 par_read_pread_all = []
 par_read_vec_all = []
+par_read_uring_all=[]
+par_read_uring_vec_all=[]
 all_par_read = [
     "par_read_all",
     "par_read_buf_all",
@@ -88,7 +92,6 @@ all_par_write = [
     "par_write_mmap_all",
     "par_write_pwrite_all",
     "par_write_vec_all",
-    "par_write_uring_vec_all"
 ]
 uring_direct = []
 default = []

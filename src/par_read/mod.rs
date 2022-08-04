@@ -275,3 +275,154 @@ pub fn par_read_vec_all(
     dump(&filebuf)?;
     Ok(e)
 }
+
+//-----------------------------------------------------------------------------
+// @warning will normally fail for total size > (2GiB - 4kiB), limit imposed
+// by vectored i/o, so partial reads/writes must be handled
+#[cfg(all(feature = "par_read_uring_vec_all", target_os = "linux"))]
+pub fn par_read_uring_vec_all(
+    fname: &str,
+    chunk_size: u64,
+    num_chunks: u64,
+    num_threads: u64,
+    filebuf: &[u8],
+) -> std::io::Result<Duration> {
+    let mut threads = Vec::new();
+    let thread_span = (fsize + num_threads - 1) / num_threads;
+    let t = Instant::now();
+    for i in 0..num_threads {
+        let offset = thread_span * i;
+        let mb = unsafe { Movable(filebuf.as_ptr().offset(offset as isize)) };
+        let fname = fname.to_owned();
+        use std::os::unix::fs::OpenOptionsExt;
+        let th = std::thread::spawn(move || {
+            let mut file = if cfg!(feature = "uring_direct") {
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .custom_flags(libc::O_DIRECT)
+                    .open(fname)?
+            } else {
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .open(fname)?
+            };
+            let ptr = match mb.get() {
+                None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
+                Some(p) => p,
+            };
+            let bytes = num_chunks * chunk_size;
+            let slice = unsafe { std::slice::from_raw_parts(ptr, bytes as usize) };
+            let mut bufs = Vec::new();
+            for c in 0..num_chunks {
+                let i = c as usize * chunk_size as usize;
+                let s = &slice[i..i + chunk_size as usize];
+                bufs.push(std::io::IoSlice::new(s));
+            }
+            let entries = num_chunks as u32;
+            let n = {
+                let mut io_uring = iou::IoUring::new(entries)?;
+                unsafe {
+                    let mut sq = io_uring.sq();
+                    let mut sqe = sq.prepare_sqe().ok_or(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Failed to prepare io_uring submission queue",
+                    ))?;
+                    sqe.prep_write_vectored(file.as_raw_fd(), &bufs, offset);
+                    io_uring.sq().submit()?;
+                }
+
+                let mut cq = io_uring.cq();
+                let cqe = cq.wait_for_cqe()?;
+                cqe.result()? as usize
+            };
+            if n != (num_chunks * chunk_size) as usize {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("seq_write_uring_all: Failed to write data from io_uring queue, requested: {}, written: {}", chunk_size * num_chunks, n).as_str()
+                ));
+            }
+
+            file.flush()?;
+            Ok(())
+        });
+        threads.push(th);
+    }
+    join_and_check!(threads);
+    let e = t.elapsed();
+    Ok(e)
+}
+
+
+//-----------------------------------------------------------------------------
+// @warning will normally fail for total size > (2GiB - 4kiB), limit imposed
+// by vectored i/o, so partial reads/writes must be handled
+#[cfg(all(feature = "par_read_uring_all", target_os = "linux"))]
+pub fn par_read_uring_all(
+    fname: &str,
+    chunk_size: u64,
+    num_threads: u64,
+    filebuf: &mut [u8],
+) -> std::io::Result<Duration> {
+    let mut threads = Vec::new();
+    let fsize = filebuf.len() as u64;
+    let thread_span = (fsize + num_threads - 1) / num_threads;
+    let t = Instant::now();
+    for i in 0..num_threads {
+        let offset = thread_span * i;
+        let mut mb = unsafe { MovableMut(filebuf.as_mut_ptr().offset(offset as isize)) };
+        let fname = fname.to_owned();
+        use std::os::unix::fs::OpenOptionsExt;
+        let th = std::thread::spawn(move || {
+            let mut file = if cfg!(feature = "uring_direct") {
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .custom_flags(libc::O_DIRECT)
+                    .open(fname)?
+            } else {
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .open(fname)?
+            };
+            let ptr = match mb.get() {
+                None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
+                Some(p) => p,
+            };
+            let bytes = if i != num_threads - 1 {
+                thread_span
+            } else {
+                fsize - (num_threads - 1) * thread_span
+            };
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, bytes as usize) };
+            let entries = 1;
+            let n = {
+                let mut io_uring = iou::IoUring::new(entries)?;
+                unsafe {
+                    let mut sq = io_uring.sq();
+                    let mut sqe = sq.prepare_sqe().ok_or(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Failed to prepare io_uring submission queue",
+                    ))?;
+                    sqe.prep_read(file.as_raw_fd(), slice, offset);
+                    io_uring.sq().submit()?;
+                }
+                let mut cq = io_uring.cq();
+                let cqe = cq.wait_for_cqe()?;
+                cqe.result()? as usize
+            };
+            if n != bytes as usize {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("seq_read_uring_all: Failed to write data from io_uring queue, requested: {}, read: {}", bytes, n).as_str()
+                ));
+            }
+            Ok(())
+        });
+        threads.push(th);
+    }
+
+    join_and_check!(threads);
+
+    let e = t.elapsed();
+    dump(&filebuf);
+    Ok(e)
+}
