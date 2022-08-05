@@ -283,16 +283,21 @@ pub fn par_read_vec_all(
 pub fn par_read_uring_vec_all(
     fname: &str,
     chunk_size: u64,
-    num_chunks: u64,
     num_threads: u64,
-    filebuf: &[u8],
+    filebuf: &mut [u8],
 ) -> std::io::Result<Duration> {
     let mut threads = Vec::new();
+    let fsize = filebuf.len();
+    let num_threads = num_threads as usize;
+    let num_chunks = ((fsize as u64 + chunk_size - 1) / chunk_size) as usize;
+    let chunk_size = chunk_size as usize;
     let thread_span = (fsize + num_threads - 1) / num_threads;
+    let chunks_per_thread = (num_chunks + num_threads - 1) / num_threads;
     let t = Instant::now();
     for i in 0..num_threads {
+        let num_chunks = chunks_per_thread.min(num_chunks - chunks_per_thread * (num_threads -1));
         let offset = thread_span * i;
-        let mb = unsafe { Movable(filebuf.as_ptr().offset(offset as isize)) };
+        let mb = unsafe { MovableMut(filebuf.as_mut_ptr().offset(offset as isize)) };
         let fname = fname.to_owned();
         use std::os::unix::fs::OpenOptionsExt;
         let th = std::thread::spawn(move || {
@@ -306,18 +311,33 @@ pub fn par_read_uring_vec_all(
                     .read(true)
                     .open(fname)?
             };
-            let ptr = match mb.get() {
+            let ptr = match mb.get()  {
                 None => return Err(IOError::new(IOErrorKind::Other, "NULL pointer")),
                 Some(p) => p,
             };
-            let bytes = num_chunks * chunk_size;
-            let slice = unsafe { std::slice::from_raw_parts(ptr, bytes as usize) };
+            let bytes = (num_chunks * chunk_size).min(fsize - offset);
+            //@warning: it is not possible to use iou to read data by dynamically creating
+            //a vector of mutable slices, it is therefore required to create manually an
+            //array of IoVec structs which are compatible with IoSliceMut
+            // - IoSliceMut contains an std::sys::io::IoSlice
+            // - sts::sys::io::IoSlice contains an iovec
+            // - iovec is declared as:
+            //      #[repr(C)]
+            //      pub struct iovec {
+            //        pub iov_base: *mut c_void,
+            //        pub iov_len: size_t,
+            //      }
+            // - IoVec is declared the same as iovec
+            // - Therefore: as slice of Vec<IoVec> can be cast to a slice of Vec<IoSliceMut>
             let mut bufs = Vec::new();
-            for c in 0..num_chunks {
-                let i = c as usize * chunk_size as usize;
-                let s = &slice[i..i + chunk_size as usize];
-                bufs.push(std::io::IoSlice::new(s));
+             
+            for i in 0..num_chunks {
+                let b = i as usize * chunk_size as usize;
+                let e = (b + chunk_size).min(fsize);
+                let iv = unsafe{IoVec{iov_base: ptr.offset(b as isize) as *mut c_void, iov_len: e - b }};
+                bufs.push(iv);
             }
+            let ioslice = unsafe {std::slice::from_raw_parts_mut(bufs.as_mut_ptr() as *mut std::io::IoSliceMut, bufs.len())};
             let entries = num_chunks as u32;
             let n = {
                 let mut io_uring = iou::IoUring::new(entries)?;
@@ -327,7 +347,7 @@ pub fn par_read_uring_vec_all(
                         std::io::ErrorKind::Other,
                         "Failed to prepare io_uring submission queue",
                     ))?;
-                    sqe.prep_write_vectored(file.as_raw_fd(), &bufs, offset);
+                    sqe.prep_read_vectored(file.as_raw_fd(), ioslice, offset as u64);
                     io_uring.sq().submit()?;
                 }
 
@@ -341,14 +361,13 @@ pub fn par_read_uring_vec_all(
                     format!("seq_write_uring_all: Failed to write data from io_uring queue, requested: {}, written: {}", chunk_size * num_chunks, n).as_str()
                 ));
             }
-
-            file.flush()?;
             Ok(())
         });
         threads.push(th);
     }
     join_and_check!(threads);
     let e = t.elapsed();
+    dump(&filebuf);
     Ok(e)
 }
 
