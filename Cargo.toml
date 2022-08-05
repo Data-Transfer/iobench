@@ -27,8 +27,6 @@ seq_read_buf_all=[]
 seq_read_mmap=[]
 seq_read_mmap_all=[]
 seq_read_vec_all=[]
-seq_read_uring_all=[]
-seq_read_uring_vec_all=[]
 all_read=[
      "seq_read",
      "seq_read_all",
@@ -65,8 +63,6 @@ seq_write_buf_all=[]
 seq_write_mmap=[]
 seq_write_mmap_all=[]
 seq_write_vec_all=[]
-seq_write_uring_all=[]
-seq_write_uring_vec_all=[]
 all_write=[
      "seq_write",
      "seq_write_all",
