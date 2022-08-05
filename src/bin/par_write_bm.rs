@@ -23,7 +23,8 @@ fn main() -> std::io::Result<()> {
     println!("Initialization time: {:.2} s", t.elapsed().as_secs_f64());
     let fsize = fsize as f64 / 0x40000000 as f64;
     println!(
-        "File size: {:.2} GiB, chunk size: {:.2} MiB, {} thread(s)",
+        "File: {}, File size: {:.2} GiB, chunk size: {:.2} MiB, {} thread(s)",
+        fname,
         fsize,
         chunk_size as f64 / 0x100000 as f64,
         num_threads

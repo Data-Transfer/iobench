@@ -431,7 +431,7 @@ pub fn par_read_uring_all(
             if n != bytes as usize {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("seq_read_uring_all: Failed to write data from io_uring queue, requested: {}, read: {}", bytes, n).as_str()
+                    format!("seq_read_uring_all: Failed to read data from io_uring queue, requested: {}, read: {}", bytes, n).as_str()
                 ));
             }
             Ok(())
